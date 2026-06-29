@@ -33,6 +33,7 @@ from notion_api import (
     load_notion_config,
     query_database,
     request_notion,
+    retrieve_database,
     retrieve_block_children,
     update_page,
 )
@@ -108,8 +109,28 @@ def get_page_title(page: Dict[str, Any]) -> str:
     return "広告分析"
 
 
-def status_property_payload(status: str) -> Dict[str, Any]:
-    return {STATUS_PROPERTY: {"status": {"name": status}}}
+def database_properties(config: Dict[str, str]) -> Dict[str, Any]:
+    return retrieve_database(config).get("properties", {})
+
+
+def resolve_status_property(properties: Dict[str, Any]) -> tuple[str, str]:
+    configured = STATUS_PROPERTY.strip()
+    if configured and configured in properties:
+        prop_type = properties[configured].get("type", "status")
+        return configured, prop_type
+    for name, prop in properties.items():
+        if prop.get("type") == "status":
+            return name, "status"
+    for name, prop in properties.items():
+        if prop.get("type") == "select" and name.lower() in ("status", "ステータス", "状態"):
+            return name, "select"
+    raise RuntimeError("Notionデータベースに status 型またはステータス用 select プロパティが見つかりません。")
+
+
+def status_property_payload(name: str, prop_type: str, status: str) -> Dict[str, Any]:
+    if prop_type == "select":
+        return {name: {"select": {"name": status}}}
+    return {name: {"status": {"name": status}}}
 
 
 def error_property_payload(message: str) -> Dict[str, Any]:
@@ -118,19 +139,24 @@ def error_property_payload(message: str) -> Dict[str, Any]:
 
 def update_notion_status(page_id: str, status: str, error: str = "") -> None:
     config = load_notion_config()
-    properties = status_property_payload(status)
-    if error:
+    db_props = database_properties(config)
+    status_name, status_type = resolve_status_property(db_props)
+    properties = status_property_payload(status_name, status_type, status)
+    if error and ERROR_PROPERTY in db_props:
         properties.update(error_property_payload(error))
     update_page(config, page_id, properties=properties)
 
 
 def oldest_page_by_status(statuses: Sequence[str]) -> Optional[Dict[str, Any]]:
     config = load_notion_config()
+    db_props = database_properties(config)
+    status_name, status_type = resolve_status_property(db_props)
+    status_filter_type = "select" if status_type == "select" else "status"
     for status in statuses:
         pages = query_database(
             config,
             page_size=1,
-            filter_data={"property": STATUS_PROPERTY, "status": {"equals": status}},
+            filter_data={"property": status_name, status_filter_type: {"equals": status}},
             sorts=[{"timestamp": "created_time", "direction": "ascending"}],
         )
         if pages:
