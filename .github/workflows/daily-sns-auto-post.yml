@@ -1,0 +1,190 @@
+name: Daily SNS Auto Post
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_now:
+        description: "今すぐ全投稿を実行する"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      slot:
+        description: "run_now=false の時に実行する投稿枠"
+        required: false
+        default: "now"
+        type: choice
+        options:
+          - "now"
+          - "07:30"
+          - "12:00"
+          - "16:00"
+          - "19:30"
+  schedule:
+    # JST 05:00: prepare the oldest target page and publish generated assets.
+    - cron: "0 20 * * *"
+    # JST 07:30 / 12:00 / 16:00 / 19:30: execute due posts.
+    - cron: "30 22 * * *"
+    - cron: "0 3 * * *"
+    - cron: "0 7 * * *"
+    - cron: "30 10 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-sns-auto-post
+  cancel-in-progress: false
+
+jobs:
+  auto-post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    env:
+      TZ: Asia/Tokyo
+      GITHUB_TOKEN: ${{ github.token }}
+      PUBLIC_ASSET_BASE_URL: ${{ secrets.PUBLIC_ASSET_BASE_URL }}
+      POST_SLOT: ${{ github.event.inputs.slot || 'now' }}
+      API_KEY: ${{ secrets.API_KEY }}
+      API_SECRET: ${{ secrets.API_SECRET }}
+      ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+      ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
+      THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+      THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+      THREADS_ACCESS_TOKEN_EXPIRES_AT: ${{ secrets.THREADS_ACCESS_TOKEN_EXPIRES_AT }}
+      THREADS_LAST_REFRESHED_AT: ${{ secrets.THREADS_LAST_REFRESHED_AT }}
+      THREADS_APP_ID: ${{ secrets.THREADS_APP_ID }}
+      THREADS_APP_SECRET: ${{ secrets.THREADS_APP_SECRET }}
+      THREADS_REDIRECT_URI: ${{ secrets.THREADS_REDIRECT_URI }}
+      INSTAGRAM_USER_ID: ${{ secrets.INSTAGRAM_USER_ID }}
+      INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+      INSTAGRAM_ACCESS_TOKEN_EXPIRES_AT: ${{ secrets.INSTAGRAM_ACCESS_TOKEN_EXPIRES_AT }}
+      INSTAGRAM_LAST_REFRESHED_AT: ${{ secrets.INSTAGRAM_LAST_REFRESHED_AT }}
+      META_APP_ID: ${{ secrets.META_APP_ID }}
+      META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+      FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+      FACEBOOK_PAGE_ACCESS_TOKEN: ${{ secrets.FACEBOOK_PAGE_ACCESS_TOKEN }}
+      FACEBOOK_USER_ACCESS_TOKEN: ${{ secrets.FACEBOOK_USER_ACCESS_TOKEN }}
+      FACEBOOK_USER_ACCESS_TOKEN_EXPIRES_AT: ${{ secrets.FACEBOOK_USER_ACCESS_TOKEN_EXPIRES_AT }}
+      FACEBOOK_PAGE_ACCESS_TOKEN_EXPIRES_AT: ${{ secrets.FACEBOOK_PAGE_ACCESS_TOKEN_EXPIRES_AT }}
+      FACEBOOK_LAST_REFRESHED_AT: ${{ secrets.FACEBOOK_LAST_REFRESHED_AT }}
+      LINKEDIN_CLIENT_ID: ${{ secrets.LINKEDIN_CLIENT_ID }}
+      LINKEDIN_CLIENT_SECRET: ${{ secrets.LINKEDIN_CLIENT_SECRET }}
+      LINKEDIN_REDIRECT_URI: ${{ secrets.LINKEDIN_REDIRECT_URI }}
+      LINKEDIN_SCOPES: ${{ secrets.LINKEDIN_SCOPES }}
+      LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+      LINKEDIN_ACCESS_TOKEN_EXPIRES_AT: ${{ secrets.LINKEDIN_ACCESS_TOKEN_EXPIRES_AT }}
+      LINKEDIN_REFRESH_TOKEN: ${{ secrets.LINKEDIN_REFRESH_TOKEN }}
+      LINKEDIN_REFRESH_TOKEN_EXPIRES_AT: ${{ secrets.LINKEDIN_REFRESH_TOKEN_EXPIRES_AT }}
+      LINKEDIN_LAST_REFRESHED_AT: ${{ secrets.LINKEDIN_LAST_REFRESHED_AT }}
+      LINKEDIN_PERSON_URN: ${{ secrets.LINKEDIN_PERSON_URN }}
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REDIRECT_URI: ${{ secrets.YOUTUBE_REDIRECT_URI }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      YOUTUBE_ACCESS_TOKEN: ${{ secrets.YOUTUBE_ACCESS_TOKEN }}
+      YOUTUBE_ACCESS_TOKEN_EXPIRES_AT: ${{ secrets.YOUTUBE_ACCESS_TOKEN_EXPIRES_AT }}
+      YOUTUBE_LAST_REFRESHED_AT: ${{ secrets.YOUTUBE_LAST_REFRESHED_AT }}
+      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+      NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+      NOTION_VERSION: ${{ secrets.NOTION_VERSION }}
+      GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}
+      GOOGLE_SHEETS_DEFAULT_SHEET: ${{ secrets.GOOGLE_SHEETS_DEFAULT_SHEET }}
+      GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}
+      NOTION_STATUS_PROPERTY: ${{ secrets.NOTION_STATUS_PROPERTY }}
+      NOTION_ERROR_PROPERTY: ${{ secrets.NOTION_ERROR_PROPERTY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Build .env from GitHub Secrets
+        run: |
+          mkdir -p credentials
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          env_keys = [
+              "API_KEY", "API_SECRET", "ACCESS_TOKEN", "ACCESS_TOKEN_SECRET",
+              "THREADS_USER_ID", "THREADS_ACCESS_TOKEN", "THREADS_ACCESS_TOKEN_EXPIRES_AT",
+              "THREADS_LAST_REFRESHED_AT", "THREADS_APP_ID", "THREADS_APP_SECRET", "THREADS_REDIRECT_URI",
+              "INSTAGRAM_USER_ID", "INSTAGRAM_ACCESS_TOKEN", "INSTAGRAM_ACCESS_TOKEN_EXPIRES_AT",
+              "INSTAGRAM_LAST_REFRESHED_AT", "META_APP_ID", "META_APP_SECRET",
+              "FACEBOOK_PAGE_ID", "FACEBOOK_PAGE_ACCESS_TOKEN", "FACEBOOK_USER_ACCESS_TOKEN",
+              "FACEBOOK_USER_ACCESS_TOKEN_EXPIRES_AT", "FACEBOOK_PAGE_ACCESS_TOKEN_EXPIRES_AT",
+              "FACEBOOK_LAST_REFRESHED_AT",
+              "LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET", "LINKEDIN_REDIRECT_URI", "LINKEDIN_SCOPES",
+              "LINKEDIN_ACCESS_TOKEN", "LINKEDIN_ACCESS_TOKEN_EXPIRES_AT", "LINKEDIN_REFRESH_TOKEN",
+              "LINKEDIN_REFRESH_TOKEN_EXPIRES_AT", "LINKEDIN_LAST_REFRESHED_AT", "LINKEDIN_PERSON_URN",
+              "YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REDIRECT_URI", "YOUTUBE_REFRESH_TOKEN",
+              "YOUTUBE_ACCESS_TOKEN", "YOUTUBE_ACCESS_TOKEN_EXPIRES_AT", "YOUTUBE_LAST_REFRESHED_AT",
+              "NOTION_TOKEN", "NOTION_DATABASE_ID", "NOTION_VERSION",
+              "GOOGLE_SHEETS_SPREADSHEET_ID", "GOOGLE_SHEETS_DEFAULT_SHEET",
+              "NOTION_STATUS_PROPERTY", "NOTION_ERROR_PROPERTY",
+          ]
+          lines = []
+          for key in env_keys:
+              value = os.environ.get(key, "")
+              if value:
+                  lines.append(f"{key}={value}")
+          if os.environ.get("GOOGLE_SHEETS_CREDENTIALS_JSON"):
+              Path("credentials/google-sheets-service-account.json").write_text(
+                  os.environ["GOOGLE_SHEETS_CREDENTIALS_JSON"],
+                  encoding="utf-8",
+              )
+              lines.append("GOOGLE_SHEETS_CREDENTIALS_FILE=credentials/google-sheets-service-account.json")
+          Path(".env").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+
+      - name: Decide mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run_now=${{ github.event.inputs.run_now }}" >> "$GITHUB_OUTPUT"
+            echo "slot=${{ github.event.inputs.slot }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 20 * * *" ]; then
+            echo "run_now=false" >> "$GITHUB_OUTPUT"
+            echo "slot=prepare" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "30 22 * * *" ]; then
+            echo "run_now=false" >> "$GITHUB_OUTPUT"
+            echo "slot=07:30" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 3 * * *" ]; then
+            echo "run_now=false" >> "$GITHUB_OUTPUT"
+            echo "slot=12:00" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 7 * * *" ]; then
+            echo "run_now=false" >> "$GITHUB_OUTPUT"
+            echo "slot=16:00" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_now=false" >> "$GITHUB_OUTPUT"
+            echo "slot=19:30" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare daily assets
+        if: steps.mode.outputs.slot == 'prepare'
+        run: python daily_auto_post.py --prepare
+
+      - name: Run immediate full test
+        if: steps.mode.outputs.run_now == 'true'
+        run: python daily_auto_post.py --prepare --run-now
+
+      - name: Execute scheduled slot
+        if: steps.mode.outputs.slot != 'prepare' && steps.mode.outputs.run_now != 'true'
+        run: python daily_auto_post.py --execute --slot "${{ steps.mode.outputs.slot }}"

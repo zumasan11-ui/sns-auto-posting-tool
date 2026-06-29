@@ -1,0 +1,192 @@
+# SNS自動投稿ツール
+
+広告分析コンテンツを、SNS向けのカルーセル画像、LinkedIn PDF、Instagram Reels動画に変換し、各SNSへ投稿するためのPythonツール群です。
+
+## できること
+
+- 広告スクショからInstagram/LinkedIn向けカルーセル画像を生成
+- カルーセル画像からLinkedIn投稿用PDFを生成
+- 広告画像と分析文からInstagram Reels用MP4を生成
+- Instagramカルーセル投稿、Instagram Reels投稿
+- YouTube Shorts投稿
+- Notion APIによるデータベース読み書き
+- Google Sheets APIによるスプレッドシート読み書き
+- X、Threads、Instagram、Facebookページ、LinkedInへの投稿
+- GitHub Actionsによる毎日自動投稿
+- Xの予約投稿
+- Threads/LinkedIn/YouTube OAuth補助
+- Threads/Meta/LinkedIn/YouTubeアクセストークン自動更新
+- Instagram Business Account ID取得補助
+
+## セットアップ
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+`.env` に必要なAPIキーとアクセストークンを入れてください。
+
+詳細は [docs/environment.md](docs/environment.md) を参照してください。
+
+## 主要コマンド
+
+### カルーセル画像生成
+
+```bash
+python carousel_generator.py \
+  --image /path/to/ad.png \
+  --text "分析文" \
+  --output-dir deliverables/carousel_test \
+  --count 10
+```
+
+### Instagram Reels動画生成
+
+```bash
+python reels_generator.py \
+  --structured-reel \
+  --ad-images /path/to/ad1.png /path/to/ad2.png \
+  --ad-text "広告分析文" \
+  --business-text "ビジネスモデル分析文" \
+  --cover-title "なぜこの広告は◯ヶ月回っているのか？" \
+  --output deliverables/reels/structured_reel.mp4 \
+  --cover-duration 1.5 \
+  --slide-duration 3 \
+  --transition none
+```
+
+### Instagramカルーセル投稿
+
+```bash
+python carousel_poster.py instagram \
+  --base-url "https://example.com/slides" \
+  --caption "投稿文" \
+  --count 10
+```
+
+### Instagram Reels投稿
+
+```bash
+python reels_generator.py --post \
+  --video-url "https://example.com/reel.mp4" \
+  --caption "投稿文"
+```
+
+Instagram Graph APIではローカルMP4を直接投稿できません。Meta側から取得できる公開HTTPS URLが必要です。
+
+### LinkedIn PDF投稿
+
+```bash
+python carousel_poster.py linkedin \
+  --pdf deliverables/carousel_test/linkedin_carousel.pdf \
+  --text "投稿文" \
+  --title "広告クリエイティブ改善メモ"
+```
+
+### YouTube Shorts投稿
+
+初回だけOAuth認証を行い、`YOUTUBE_REFRESH_TOKEN` を `.env` に保存します。
+
+```bash
+python youtube_oauth.py
+```
+
+ローカルMP4をYouTubeへアップロードします。
+
+```bash
+python youtube_poster.py \
+  --video deliverables/reels/structured_reel.mp4 \
+  --title "広告クリエイティブ改善メモ #Shorts" \
+  --description "概要欄テキスト" \
+  --tags 広告 マーケティング Shorts
+```
+
+設定手順は [docs/youtube.md](docs/youtube.md) を参照してください。
+
+### テキスト投稿
+
+```bash
+python main.py --platform x -t "投稿文"
+python main.py --platform threads -t "投稿文"
+python main.py --platform instagram --image-url "https://example.com/image.png" -t "投稿文"
+python main.py --platform facebook -t "投稿文"
+python main.py --platform linkedin -t "投稿文"
+python main.py --platform youtube --video deliverables/reels/structured_reel.mp4 --title "タイトル #Shorts" -t "概要欄"
+```
+
+### Notion API連携
+
+ブラウザ操作ではなくNotion APIでデータベースを読み書きします。
+
+```bash
+python notion_api.py schema
+python notion_api.py list --limit 10
+```
+
+設定手順は [docs/notion.md](docs/notion.md) を参照してください。
+
+### アクセストークン更新
+
+更新可能なSNSトークンを更新し、`.env` へ保存します。
+
+```bash
+python token_refresh.py status
+python token_refresh.py all
+python token_refresh.py youtube --force
+```
+
+Threads、Instagram、Facebook、LinkedIn、YouTubeの投稿前にも自動更新を試みます。更新できない場合だけ再認証が必要です。
+
+### Google Sheets API連携
+
+サービスアカウントJSONでGoogle Sheets APIに接続し、スプレッドシートを読み書きします。
+
+```bash
+python sheets_api.py meta
+python sheets_api.py read --range "Sheet1!A1:D10"
+python sheets_api.py append --range "Sheet1!A:D" --values-json '[["2026-06-29","投稿案","未着手"]]'
+```
+
+設定手順は [docs/sheets.md](docs/sheets.md) を参照してください。
+
+### GitHub Actions日次自動投稿
+
+```bash
+python daily_auto_post.py --prepare
+python daily_auto_post.py --execute --slot "07:30"
+python daily_auto_post.py --prepare --run-now
+```
+
+GitHub Actionsでは日本時間5:00に投稿計画と画像/動画を生成し、7:30、12:00、16:00、19:30のワークフローで該当分を投稿します。手動テストはActionsの `Daily SNS Auto Post` から `run_now=true` で実行できます。
+
+詳細は [docs/github-actions.md](docs/github-actions.md) を参照してください。
+
+## ドキュメント
+
+- [docs/project-rules.md](docs/project-rules.md): このプロジェクトの保守ルール
+- [docs/environment.md](docs/environment.md): 環境変数とAPI設定
+- [docs/oauth.md](docs/oauth.md): OAuth/認証手順
+- [docs/notion.md](docs/notion.md): Notion API連携
+- [docs/sheets.md](docs/sheets.md): Google Sheets API連携
+- [docs/youtube.md](docs/youtube.md): YouTube Shorts投稿設定
+- [docs/templates.md](docs/templates.md): テンプレート構成
+- [docs/workflows.md](docs/workflows.md): 実行フロー
+- [docs/sns-posting.md](docs/sns-posting.md): 各SNS投稿の仕組み
+- [docs/github-actions.md](docs/github-actions.md): GitHub Actions移行とSecrets設定
+
+## 開発ルール
+
+新しい機能を追加したら、必ずドキュメントも更新してください。
+
+- 設計意図
+- 使い方
+- 必要な依存ライブラリ
+- 必要な環境変数
+- 実行コマンド
+- 生成物の保存先
+- SNS投稿までの流れ
+
+チャット履歴がなくなっても、このリポジトリだけ見れば保守・改修できる状態を維持します。
