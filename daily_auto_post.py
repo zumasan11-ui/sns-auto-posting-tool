@@ -47,8 +47,8 @@ from youtube_poster import upload_youtube_short
 
 
 JST_TZ = "Asia/Tokyo"
-STATUS_PROPERTY = os.getenv("NOTION_STATUS_PROPERTY", "Status")
-ERROR_PROPERTY = os.getenv("NOTION_ERROR_PROPERTY", "エラー内容")
+STATUS_PROPERTY = os.getenv("NOTION_STATUS_PROPERTY") or "Status"
+ERROR_PROPERTY = os.getenv("NOTION_ERROR_PROPERTY") or "エラー内容"
 STATE_DIR = Path(os.getenv("AUTO_POST_STATE_DIR", "public_state"))
 PUBLIC_ROOT = STATE_DIR / "public"
 STATE_FILE = STATE_DIR / "state" / "current.json"
