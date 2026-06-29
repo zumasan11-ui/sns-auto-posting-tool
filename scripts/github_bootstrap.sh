@@ -80,16 +80,18 @@ PUBLIC_URL="https://${OWNER}.github.io/${NAME}"
 gh secret set PUBLIC_ASSET_BASE_URL --body "$PUBLIC_URL"
 
 tmp_dir="$(mktemp -d)"
-git worktree add "$tmp_dir" --orphan gh-pages
+git clone --no-checkout "$(git remote get-url origin)" "$tmp_dir"
 (
   cd "$tmp_dir"
+  git checkout --orphan gh-pages
+  git rm -rf . >/dev/null 2>&1 || true
   printf "GitHub Pages assets for SNS auto posting\n" > index.html
   touch .nojekyll
   git add index.html .nojekyll
   git commit -m "Initialize GitHub Pages"
   git push -u origin gh-pages
 )
-git worktree remove "$tmp_dir"
+rm -rf "$tmp_dir"
 
 gh api \
   --method POST \
