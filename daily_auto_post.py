@@ -57,6 +57,7 @@ RUNTIME_DIR = Path("deliverables/auto_post")
 SLOTS = ("07:30", "12:00", "16:00", "19:30")
 TWO_SLOT_TIMES = ("07:30", "19:30")
 CIRCLED_DIGITS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
+PLATFORM_STATUS_PROPERTIES = ("X", "Threads", "Instagram", "Facebook", "LinkedIn", "YouTube")
 
 
 @dataclass
@@ -113,18 +114,58 @@ def database_properties(config: Dict[str, str]) -> Dict[str, Any]:
     return retrieve_database(config).get("properties", {})
 
 
-def resolve_status_property(properties: Dict[str, Any]) -> tuple[str, str]:
+def resolve_single_status_property(properties: Dict[str, Any]) -> Optional[tuple[str, str]]:
     configured = STATUS_PROPERTY.strip()
     if configured and configured in properties:
         prop_type = properties[configured].get("type", "status")
         return configured, prop_type
+    if configured and configured not in ("Status", "ステータス"):
+        raise RuntimeError(f"Notionデータベースにステータスプロパティ {configured} が見つかりません。")
+    return None
+
+
+def platform_status_properties(properties: Dict[str, Any]) -> List[str]:
+    return [
+        name
+        for name in PLATFORM_STATUS_PROPERTIES
+        if properties.get(name, {}).get("type") == "status"
+    ]
+
+
+def resolve_status_targets(properties: Dict[str, Any]) -> List[tuple[str, str]]:
+    single = resolve_single_status_property(properties)
+    if single:
+        return [single]
+    platform_props = platform_status_properties(properties)
+    if platform_props:
+        return [(name, "status") for name in platform_props]
     for name, prop in properties.items():
         if prop.get("type") == "status":
-            return name, "status"
+            return [(name, "status")]
     for name, prop in properties.items():
         if prop.get("type") == "select" and name.lower() in ("status", "ステータス", "状態"):
-            return name, "select"
+            return [(name, "select")]
     raise RuntimeError("Notionデータベースに status 型またはステータス用 select プロパティが見つかりません。")
+
+
+def property_option_names(prop: Dict[str, Any], prop_type: str) -> List[str]:
+    options = (prop.get(prop_type) or {}).get("options", [])
+    return [str(option.get("name", "")) for option in options]
+
+
+def status_value_for(properties: Dict[str, Any], name: str, prop_type: str, status: str) -> str:
+    options = property_option_names(properties.get(name, {}), prop_type)
+    if status in options:
+        return status
+    if status == "エラー":
+        for fallback in ("エラー", "未投稿", "未着手", "To-do"):
+            if fallback in options:
+                return fallback
+    if status == "未投稿":
+        for fallback in ("未投稿", "未着手", "To-do"):
+            if fallback in options:
+                return fallback
+    raise RuntimeError(f"Notionプロパティ {name} にステータス選択肢 {status} がありません。")
 
 
 def status_property_payload(name: str, prop_type: str, status: str) -> Dict[str, Any]:
@@ -140,8 +181,10 @@ def error_property_payload(message: str) -> Dict[str, Any]:
 def update_notion_status(page_id: str, status: str, error: str = "") -> None:
     config = load_notion_config()
     db_props = database_properties(config)
-    status_name, status_type = resolve_status_property(db_props)
-    properties = status_property_payload(status_name, status_type, status)
+    properties: Dict[str, Any] = {}
+    for status_name, status_type in resolve_status_targets(db_props):
+        value = status_value_for(db_props, status_name, status_type, status)
+        properties.update(status_property_payload(status_name, status_type, value))
     if error and ERROR_PROPERTY in db_props:
         properties.update(error_property_payload(error))
     update_page(config, page_id, properties=properties)
@@ -150,13 +193,23 @@ def update_notion_status(page_id: str, status: str, error: str = "") -> None:
 def oldest_page_by_status(statuses: Sequence[str]) -> Optional[Dict[str, Any]]:
     config = load_notion_config()
     db_props = database_properties(config)
-    status_name, status_type = resolve_status_property(db_props)
-    status_filter_type = "select" if status_type == "select" else "status"
+    status_targets = resolve_status_targets(db_props)
     for status in statuses:
+        filters = []
+        for status_name, status_type in status_targets:
+            status_filter_type = "select" if status_type == "select" else "status"
+            try:
+                value = status_value_for(db_props, status_name, status_type, status)
+            except RuntimeError:
+                continue
+            filters.append({"property": status_name, status_filter_type: {"equals": value}})
+        if not filters:
+            continue
+        filter_data = filters[0] if len(filters) == 1 else {"or": filters}
         pages = query_database(
             config,
             page_size=1,
-            filter_data={"property": status_name, status_filter_type: {"equals": status}},
+            filter_data=filter_data,
             sorts=[{"timestamp": "created_time", "direction": "ascending"}],
         )
         if pages:
