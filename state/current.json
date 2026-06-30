@@ -78,8 +78,10 @@
       "text": "かきくけこ、なにぬねの",
       "image_url": null,
       "image_path": null,
-      "status": "error",
-      "error": ".env に必要な値がありません: THREADS_USER_ID\n.env.example を見ながら .env に Threads の値を入れてください。"
+      "status": "posted",
+      "error": "",
+      "post_url": "Threads投稿ID: 18094106411621506",
+      "posted_at": "2026-06-30T20:09:05.536069+09:00"
     },
     {
       "id": "facebook-2",
