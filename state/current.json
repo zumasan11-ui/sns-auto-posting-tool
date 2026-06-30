@@ -63,7 +63,10 @@
       "text": "かきくけこ、なにぬねの",
       "image_url": null,
       "image_path": null,
-      "status": "pending"
+      "status": "posted",
+      "post_url": "https://x.com/i/web/status/2071843014448697761",
+      "posted_at": "2026-06-30T15:27:22.404332+09:00",
+      "error": ""
     },
     {
       "id": "threads-2",
