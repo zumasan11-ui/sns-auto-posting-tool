@@ -93,8 +93,10 @@
       "text": "かきくけこ、なにぬねの",
       "image_url": null,
       "image_path": null,
-      "status": "error",
-      "error": ".env に必要な値がありません: FACEBOOK_PAGE_ID\n.env.example を見ながら .env に Facebook の値を入れてください。"
+      "status": "posted",
+      "error": "",
+      "post_url": "https://www.facebook.com/1017862924754816_122111533851312529",
+      "posted_at": "2026-06-30T22:33:57.169938+09:00"
     },
     {
       "id": "instagram-carousel-1",
