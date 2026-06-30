@@ -135,7 +135,10 @@
       "description": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
       "video_path": "deliverables/auto_post/28424583990/reel_01/reel.mp4",
       "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424583990/reel_01/reel.mp4",
-      "status": "pending"
+      "status": "posted",
+      "post_url": "https://www.youtube.com/shorts/aIRMzu1Ds3k",
+      "posted_at": "2026-06-30T15:27:48.095770+09:00",
+      "error": ""
     }
   ]
 }
