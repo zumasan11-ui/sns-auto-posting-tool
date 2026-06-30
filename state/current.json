@@ -1,0 +1,120 @@
+{
+  "status": "planned",
+  "page_id": "38d26376-69c6-8060-81fd-dc7595296e5a",
+  "page_url": "https://app.notion.com/p/38d2637669c6806081fddc7595296e5a",
+  "title": "広告分析",
+  "run_id": "28424497967",
+  "created_at": "2026-06-30T15:19:07.135380+09:00",
+  "sections": [
+    {
+      "number": 1,
+      "text": "掲載期間1年\nあいうえお",
+      "companies": [],
+      "period_text": "1年"
+    },
+    {
+      "number": 2,
+      "text": "かきくけこ、なにぬねの",
+      "companies": [],
+      "period_text": "○ヶ月"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "x-1",
+      "kind": "text",
+      "platform": "x",
+      "slot": "now",
+      "text": "あいうえお",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424497967/source/notion_image_01.png",
+      "status": "pending"
+    },
+    {
+      "id": "threads-1",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "now",
+      "text": "あいうえお",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424497967/source/notion_image_01.png",
+      "status": "pending"
+    },
+    {
+      "id": "facebook-1",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "now",
+      "text": "あいうえお",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424497967/source/notion_image_01.png",
+      "status": "pending"
+    },
+    {
+      "id": "x-2",
+      "kind": "text",
+      "platform": "x",
+      "slot": "now",
+      "text": "かきくけこ、なにぬねの",
+      "image_url": null,
+      "status": "pending"
+    },
+    {
+      "id": "threads-2",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "now",
+      "text": "かきくけこ、なにぬねの",
+      "image_url": null,
+      "status": "pending"
+    },
+    {
+      "id": "facebook-2",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "now",
+      "text": "かきくけこ、なにぬねの",
+      "image_url": null,
+      "status": "pending"
+    },
+    {
+      "id": "instagram-carousel-1",
+      "kind": "carousel",
+      "platform": "instagram",
+      "slot": "now",
+      "caption": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
+      "image_urls": [
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424497967/carousel_01/slide_01.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424497967/carousel_01/slide_02.png"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "linkedin-carousel-1",
+      "kind": "linkedin_pdf",
+      "platform": "linkedin",
+      "slot": "now",
+      "caption": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
+      "pdf_path": "deliverables/auto_post/28424497967/carousel_01/linkedin_carousel.pdf",
+      "pdf_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424497967/carousel_01/linkedin_carousel.pdf",
+      "status": "pending"
+    },
+    {
+      "id": "instagram-reel-1",
+      "kind": "reel",
+      "platform": "instagram",
+      "slot": "now",
+      "caption": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
+      "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424497967/reel_01/reel.mp4",
+      "status": "pending"
+    },
+    {
+      "id": "youtube-short-1",
+      "kind": "youtube",
+      "platform": "youtube",
+      "slot": "now",
+      "title": "勝ち広告を分析してみました #Shorts",
+      "description": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
+      "video_path": "deliverables/auto_post/28424497967/reel_01/reel.mp4",
+      "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424497967/reel_01/reel.mp4",
+      "status": "pending"
+    }
+  ]
+}
