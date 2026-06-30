@@ -106,7 +106,11 @@ def receive_authorization_code(auth_url: str, redirect_uri: str) -> str:
     print(auth_url)
     print(f"\nOAuth Redirect URI: {redirect_uri}")
     print(f"Local callback listener: http://{SERVER_HOST}:{SERVER_PORT}/callback\n")
-    webbrowser.open(auth_url)
+    if os.getenv("OAUTH_NO_BROWSER", "").strip() != "1":
+        try:
+            webbrowser.open(auth_url)
+        except BaseException:
+            pass
 
     server = HTTPServer((SERVER_HOST, SERVER_PORT), CallbackHandler)
     server.handle_request()
