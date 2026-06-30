@@ -571,7 +571,9 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
     for section, slot in zip(sections, text_slots):
         text = strip_numbering(section.text)
         image_url = None
+        image_path = None
         if section.images:
+            image_path = str(section.images[0])
             image_url = copy_public(section.images[0], asset_prefix / "source" / section.images[0].name)
         for platform in ("x", "threads", "facebook"):
             tasks.append(
@@ -582,6 +584,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "slot": slot,
                     "text": text,
                     "image_url": image_url,
+                    "image_path": image_path,
                     "status": "pending",
                 }
             )
@@ -690,7 +693,7 @@ def create_threads_image_post(text: str, image_url: Optional[str]) -> str:
     return f"Threads投稿ID: {post_id}"
 
 
-def create_x_post(text: str, image_url: Optional[str]) -> str:
+def create_x_post(text: str, image_url: Optional[str], image_path: Optional[str] = None) -> str:
     credentials = load_credentials()
     validation_error = validate_post_text(text, "x")
     if validation_error:
@@ -708,9 +711,11 @@ def create_x_post(text: str, image_url: Optional[str]) -> str:
         credentials["ACCESS_TOKEN_SECRET"],
     )
     api = tweepy.API(auth)
-    tmp = RUNTIME_DIR / "x_media"
-    tmp.mkdir(parents=True, exist_ok=True)
-    media_path = download_file(image_url, tmp, int(time.time()) % 100000)
+    media_path = Path(image_path) if image_path and Path(image_path).exists() else None
+    if media_path is None:
+        tmp = RUNTIME_DIR / "x_media"
+        tmp.mkdir(parents=True, exist_ok=True)
+        media_path = download_file(image_url, tmp, int(time.time()) % 100000)
     media = api.media_upload(str(media_path))
     response = client.create_tweet(text=text, media_ids=[media.media_id_string])
     tweet_id = response.data.get("id") if response.data else None
@@ -725,7 +730,7 @@ def execute_task(task: Dict[str, Any]) -> str:
         text = task["text"]
         image_url = task.get("image_url")
         if task["platform"] == "x":
-            return create_x_post(text, image_url)
+            return create_x_post(text, image_url, task.get("image_path"))
         if task["platform"] == "threads":
             return create_threads_image_post(text, image_url)
         if task["platform"] == "facebook":
