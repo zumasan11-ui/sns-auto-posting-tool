@@ -98,6 +98,32 @@ python instagram_setup.py
 - `instagram_content_publish`
 - Facebookページ関連のGraph API権限
 
+## Meta OAuth（Instagram/Facebookページ）
+
+InstagramとFacebookページをまとめて投稿可能にする場合:
+
+```bash
+python meta_oauth.py
+```
+
+必要な `.env`:
+
+```env
+META_APP_ID=
+META_APP_SECRET=
+META_REDIRECT_URI=http://localhost:8766/callback
+```
+
+取得・保存する値:
+
+- `INSTAGRAM_USER_ID`
+- `INSTAGRAM_ACCESS_TOKEN`
+- `FACEBOOK_PAGE_ID`
+- `FACEBOOK_PAGE_ACCESS_TOKEN`
+- `FACEBOOK_USER_ACCESS_TOKEN`
+
+Facebook LoginのリダイレクトURIには `.env` の `META_REDIRECT_URI` と同じURLを登録してください。
+
 ## アクセストークン自動更新
 
 スクリプト:
