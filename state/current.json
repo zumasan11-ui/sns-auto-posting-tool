@@ -27,7 +27,8 @@
       "slot": "now",
       "text": "あいうえお",
       "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424497967/source/notion_image_01.png",
-      "status": "pending"
+      "status": "error",
+      "error": "404 Client Error: Not Found for url: https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424497967/source/notion_image_01.png"
     },
     {
       "id": "threads-1",
