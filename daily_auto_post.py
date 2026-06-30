@@ -225,18 +225,19 @@ def ensure_state_branch() -> None:
     if not repo:
         return
     url = f"https://x-access-token:{os.getenv('GITHUB_TOKEN', '')}@github.com/{repo}.git"
-    result = subprocess.run(
-        ["git", "clone", "--branch", "gh-pages", "--single-branch", url, str(STATE_DIR)],
+    subprocess.run(["git", "init", str(STATE_DIR)], check=True)
+    subprocess.run(["git", "-C", str(STATE_DIR), "remote", "add", "origin", url], check=True)
+    fetch = subprocess.run(
+        ["git", "-C", str(STATE_DIR), "fetch", "origin", "gh-pages"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         check=False,
     )
-    if result.returncode == 0:
-        return
-    subprocess.run(["git", "init", str(STATE_DIR)], check=True)
-    subprocess.run(["git", "-C", str(STATE_DIR), "checkout", "-b", "gh-pages"], check=True)
-    subprocess.run(["git", "-C", str(STATE_DIR), "remote", "add", "origin", url], check=True)
+    if fetch.returncode == 0:
+        subprocess.run(["git", "-C", str(STATE_DIR), "checkout", "-B", "gh-pages", "origin/gh-pages"], check=True)
+    else:
+        subprocess.run(["git", "-C", str(STATE_DIR), "checkout", "-b", "gh-pages"], check=True)
 
 
 def save_state(state: Dict[str, Any], push: bool = True) -> None:
