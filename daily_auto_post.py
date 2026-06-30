@@ -14,9 +14,9 @@ from urllib.parse import urlparse
 
 import requests
 from dotenv import load_dotenv
-from PIL import Image
+from PIL import Image, ImageDraw
 
-from carousel_generator import render_slide, save_pdf
+from carousel_generator import load_font, render_slide, save_pdf, wrap_text
 from carousel_poster import post_instagram_carousel, post_linkedin_pdf
 from main import (
     build_client,
@@ -378,9 +378,14 @@ def extract_sections(page: Dict[str, Any], work_dir: Path) -> List[AdSection]:
         body_text = "\n".join(block_to_text(block).strip() for block in blocks if block_to_text(block).strip())
         sections.append(AdSection(number=1, text=body_text or get_page_title(page)))
 
+    section_images = [path for section in sections for path in section.images]
+    fallback_images = section_images or images
+    last_image: Optional[Path] = fallback_images[0] if fallback_images else None
     for section in sections:
-        if not section.images and images:
-            section.images.append(images[min(section.number - 1, len(images) - 1)])
+        if section.images:
+            last_image = section.images[0]
+        elif last_image and section.number % 2 == 1:
+            section.images.append(last_image)
         section.companies = extract_companies(section.text)
         section.period_text = extract_period_text(section.text)
     return sections
@@ -460,15 +465,48 @@ def chunked(values: Sequence[Any], size: int) -> List[List[Any]]:
     return [list(values[index : index + size]) for index in range(0, len(values), size)]
 
 
+def render_carousel_business_slide(index: int, total: int, text: str) -> Image.Image:
+    canvas = Image.new("RGB", (1080, 1350), "#ffffff")
+    draw = ImageDraw.Draw(canvas)
+    label_font = load_font(30, bold=True)
+    title_font = load_font(58, bold=True)
+    body_font = load_font(44)
+    margin_x = 72
+
+    label = f"{index:02d}/{total:02d}"
+    badge = (margin_x, 54, margin_x + 160, 104)
+    bbox = draw.textbbox((0, 0), label, font=label_font)
+    draw.rounded_rectangle(badge, radius=25, fill="#111111")
+    draw.text(
+        (
+            badge[0] + (badge[2] - badge[0] - (bbox[2] - bbox[0])) / 2 - bbox[0],
+            badge[1] + (badge[3] - badge[1] - (bbox[3] - bbox[1])) / 2 - bbox[1] + 3,
+        ),
+        label,
+        font=label_font,
+        fill="#ffffff",
+    )
+
+    draw.text((margin_x, 170), "ビジネスモデル", font=title_font, fill="#111111")
+    y = 310
+    for line in wrap_text(strip_numbering(text), body_font, 1080 - margin_x * 2, 13):
+        draw.text((margin_x, y), line, font=body_font, fill="#222222")
+        y += 66
+    return canvas
+
+
 def render_carousel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     slides = []
     image_urls = []
     for index, section in enumerate(sections, start=1):
-        image_path = section.images[0] if section.images else None
-        if image_path is None:
-            raise RuntimeError("カルーセル生成に使う画像がありません。")
-        slide = render_slide(index, len(sections), "広告分析メモ", strip_numbering(section.text), Image.open(image_path))
+        if section.number % 2 == 0:
+            slide = render_carousel_business_slide(index, len(sections), section.text)
+        else:
+            image_path = section.images[0] if section.images else None
+            if image_path is None:
+                raise RuntimeError("カルーセル生成に使う画像がありません。")
+            slide = render_slide(index, len(sections), "広告分析メモ", strip_numbering(section.text), Image.open(image_path))
         slide_path = output_dir / f"slide_{index:02d}.png"
         slide.save(slide_path)
         slides.append(slide)
@@ -479,11 +517,13 @@ def render_carousel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Di
 
 
 def render_reel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Path:
-    ad_images = [section.images[0] for section in sections if section.images]
+    ad_sections = [section for section in sections if section.number % 2 == 1]
+    business_sections = [section for section in sections if section.number % 2 == 0]
+    ad_images = [section.images[0] for section in ad_sections if section.images]
     if not ad_images:
         raise RuntimeError("Reels生成に使う画像がありません。")
-    ad_texts = [strip_numbering(section.text) for section in sections]
-    business_texts = [section.text for section in sections]
+    ad_texts = [strip_numbering(section.text) for section in ad_sections]
+    business_texts = [strip_numbering(section.text) for section in business_sections] or ad_texts
     period = sections[0].period_text or "○ヶ月"
     title = f"なぜこの広告は{period}回っているのか？"
     pages = build_structured_reel_pages(
