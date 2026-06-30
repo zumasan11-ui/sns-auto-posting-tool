@@ -133,8 +133,10 @@
       "slot": "now",
       "caption": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
       "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424583990/reel_01/reel.mp4",
-      "status": "error",
-      "error": "HTTP 400: {'error': {'message': 'Error validating access token: Session has expired on Sunday, 28-Jun-26 04:00:00 PDT. The current time is Monday, 29-Jun-26 23:27:41 PDT.', 'type': 'OAuthException', 'code': 190, 'error_subcode': 463, 'fbtrace_id': 'ApSygNXZvG7OHQ9iBRFgD7I'}}"
+      "status": "posted",
+      "error": "",
+      "post_url": "https://www.instagram.com/reel/DaNj5cxlJDz/",
+      "posted_at": "2026-06-30T22:35:19.813479+09:00"
     },
     {
       "id": "youtube-short-1",
