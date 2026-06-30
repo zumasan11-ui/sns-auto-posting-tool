@@ -111,7 +111,10 @@
       "caption": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
       "pdf_path": "deliverables/auto_post/28424583990/carousel_01/linkedin_carousel.pdf",
       "pdf_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424583990/carousel_01/linkedin_carousel.pdf",
-      "status": "pending"
+      "status": "posted",
+      "post_url": "urn:li:ugcPost:7477608768529203201",
+      "posted_at": "2026-06-30T15:27:37.927641+09:00",
+      "error": ""
     },
     {
       "id": "instagram-reel-1",
