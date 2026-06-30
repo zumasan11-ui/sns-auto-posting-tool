@@ -28,7 +28,10 @@
       "text": "あいうえお",
       "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424583990/source/notion_image_01.png",
       "image_path": "deliverables/auto_post/28424583990/source/notion_image_01.png",
-      "status": "pending"
+      "status": "posted",
+      "post_url": "https://x.com/i/web/status/2071841474744910217",
+      "posted_at": "2026-06-30T15:21:15.424496+09:00",
+      "error": ""
     },
     {
       "id": "threads-1",
