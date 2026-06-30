@@ -549,6 +549,17 @@ def copy_public(path: Path, relative_path: Path) -> str:
 
 
 def create_plan(run_now: bool = False) -> Dict[str, Any]:
+    existing_state = load_state()
+    if (
+        existing_state
+        and existing_state.get("status") in ("planned", "error")
+        and existing_state.get("page_id")
+        and any(task.get("status") != "posted" for task in existing_state.get("tasks", []))
+    ):
+        existing_state["status"] = "planned"
+        save_state(existing_state)
+        return existing_state
+
     page = oldest_page_by_status(("進行中", "エラー", "未投稿"))
     if not page:
         state = {"status": "idle", "message": "未投稿ページがありません。", "created_at": now_jst().isoformat()}
