@@ -6,7 +6,7 @@
 
 ```env
 NOTION_TOKEN=
-NOTION_DATABASE_ID=38d2637669c68001bac3d716e8beb2f1
+NOTION_DATABASE_ID=your_notion_database_id_here
 NOTION_VERSION=2022-06-28
 ```
 
@@ -23,7 +23,7 @@ NOTION_VERSION=2022-06-28
 今回の対象:
 
 ```env
-NOTION_DATABASE_ID=38d2637669c68001bac3d716e8beb2f1
+NOTION_DATABASE_ID=your_notion_database_id_here
 ```
 
 ## スキーマ確認
