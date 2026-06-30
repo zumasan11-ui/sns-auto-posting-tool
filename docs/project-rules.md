@@ -36,5 +36,12 @@
 ## 触ってはいけないもの
 
 - `.env` の実値をREADME/docsに書かない
+- 秘密情報はGitHub Secretsまたはローカル `.env` のみに保存する
+- `.env`、`credentials/`、JSON秘密鍵、トークン類は絶対にGit管理しない
+- README、docs、ログ、GitHub Actions出力に秘密情報を表示しない
+- `.env.example` にはプレースホルダーだけを書く
+- APIキー、アクセストークン、クライアントシークレット、JSONキーを扱う処理では値をマスクまたは非表示にする
+- コミット前に `python3 scripts/secret_scan.py --mode staged` を実行する。初回は `bash scripts/install_git_hooks.sh` でpre-commit hookを入れる
+- GitHub ActionsではSecretsから環境変数を読み込む構成にし、コードやworkflowへ実値を書かない
 - ユーザーが作った生成物を勝手に削除しない
 - 既存テンプレートを壊す大きな変更を、互換性なしで入れない
