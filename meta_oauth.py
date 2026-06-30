@@ -2,6 +2,7 @@ import os
 import sys
 import urllib.parse
 import webbrowser
+import argparse
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -26,6 +27,22 @@ SCOPES = (
     "instagram_basic",
     "instagram_content_publish",
 )
+SERVICE_SCOPES = {
+    "combined": SCOPES,
+    "instagram": (
+        "pages_show_list",
+        "pages_read_engagement",
+        "business_management",
+        "instagram_basic",
+        "instagram_content_publish",
+    ),
+    "facebook": (
+        "pages_show_list",
+        "pages_read_engagement",
+        "pages_manage_posts",
+        "business_management",
+    ),
+}
 
 
 def env_value(key: str) -> str:
@@ -40,11 +57,20 @@ def first_env(*keys: str) -> str:
     return ""
 
 
-def load_meta_app() -> Dict[str, str]:
+def load_meta_app(service: str = "combined") -> Dict[str, str]:
     load_dotenv(dotenv_path=ENV_FILE, override=True)
-    app_id = first_env("META_APP_ID", "FACEBOOK_APP_ID", "INSTAGRAM_APP_ID")
-    app_secret = first_env("META_APP_SECRET", "FACEBOOK_APP_SECRET", "INSTAGRAM_APP_SECRET")
-    redirect_uri = first_env("META_REDIRECT_URI", "FACEBOOK_REDIRECT_URI", "INSTAGRAM_REDIRECT_URI") or DEFAULT_REDIRECT_URI
+    if service == "instagram":
+        app_id = first_env("INSTAGRAM_APP_ID", "META_APP_ID")
+        app_secret = first_env("INSTAGRAM_APP_SECRET", "META_APP_SECRET")
+        redirect_uri = first_env("INSTAGRAM_REDIRECT_URI", "META_REDIRECT_URI") or DEFAULT_REDIRECT_URI
+    elif service == "facebook":
+        app_id = first_env("FACEBOOK_APP_ID", "META_APP_ID")
+        app_secret = first_env("FACEBOOK_APP_SECRET", "META_APP_SECRET")
+        redirect_uri = first_env("FACEBOOK_REDIRECT_URI", "META_REDIRECT_URI") or DEFAULT_REDIRECT_URI
+    else:
+        app_id = first_env("META_APP_ID", "FACEBOOK_APP_ID", "INSTAGRAM_APP_ID")
+        app_secret = first_env("META_APP_SECRET", "FACEBOOK_APP_SECRET", "INSTAGRAM_APP_SECRET")
+        redirect_uri = first_env("META_REDIRECT_URI", "FACEBOOK_REDIRECT_URI", "INSTAGRAM_REDIRECT_URI") or DEFAULT_REDIRECT_URI
     missing = []
     if not app_id:
         missing.append("META_APP_ID")
@@ -85,11 +111,11 @@ def iso_at(seconds: int) -> str:
     return (datetime.now(timezone.utc) + timedelta(seconds=max(seconds, 0))).isoformat()
 
 
-def build_authorization_url(app_id: str, redirect_uri: str) -> str:
+def build_authorization_url(app_id: str, redirect_uri: str, service: str = "combined") -> str:
     params = {
         "client_id": app_id,
         "redirect_uri": redirect_uri,
-        "scope": ",".join(SCOPES),
+        "scope": ",".join(SERVICE_SCOPES[service]),
         "response_type": "code",
         "auth_type": "rerequest",
     }
@@ -120,7 +146,11 @@ def receive_authorization_code(auth_url: str, redirect_uri: str) -> str:
     print("Open this URL if it does not open automatically:\n", flush=True)
     print(auth_url, flush=True)
     print(f"\nOAuth Redirect URI: {redirect_uri}", flush=True)
-    webbrowser.open(auth_url)
+    if os.getenv("OAUTH_NO_BROWSER", "").strip() != "1":
+        try:
+            webbrowser.open(auth_url)
+        except BaseException:
+            pass
 
     server = HTTPServer((SERVER_HOST, SERVER_PORT), CallbackHandler)
     server.handle_request()
@@ -174,7 +204,7 @@ def graph_get(path: str, token: str, fields: str) -> Dict[str, Any]:
     )
 
 
-def choose_page(pages: List[Dict[str, Any]]) -> Dict[str, Any]:
+def choose_page(pages: List[Dict[str, Any]], require_instagram: bool = False) -> Dict[str, Any]:
     if not pages:
         raise RuntimeError("管理可能なFacebookページが見つかりませんでした。")
     preferred = env_value("FACEBOOK_PAGE_NAME")
@@ -183,6 +213,11 @@ def choose_page(pages: List[Dict[str, Any]]) -> Dict[str, Any]:
             if page.get("name") == preferred:
                 return page
         raise RuntimeError(f"FACEBOOK_PAGE_NAME={preferred} に一致するページがありません。")
+    if require_instagram:
+        for page in pages:
+            if page.get("instagram_business_account", {}).get("id"):
+                return page
+        raise RuntimeError("Instagram Business Accountが接続されたFacebookページが見つかりませんでした。")
     return pages[0]
 
 
@@ -194,10 +229,22 @@ def get_page_access_token(page_id: str, user_token: str) -> str:
     return token
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Meta OAuthでInstagram/Facebook投稿用トークンを取得します。")
+    parser.add_argument(
+        "--service",
+        choices=("combined", "instagram", "facebook"),
+        default="combined",
+        help="別アプリ運用時は instagram / facebook を指定します。",
+    )
+    return parser.parse_args()
+
+
 def main() -> int:
     try:
-        app = load_meta_app()
-        auth_url = build_authorization_url(app["app_id"], app["redirect_uri"])
+        args = parse_args()
+        app = load_meta_app(args.service)
+        auth_url = build_authorization_url(app["app_id"], app["redirect_uri"], args.service)
         code = receive_authorization_code(auth_url, app["redirect_uri"])
         short_lived = exchange_short_lived_token(
             app["app_id"],
@@ -219,7 +266,8 @@ def main() -> int:
             user_token,
             "id,name,instagram_business_account{id,username}",
         )
-        page = choose_page(pages_data.get("data", []))
+        requires_instagram_page = args.service in ("combined", "instagram")
+        page = choose_page(pages_data.get("data", []), require_instagram=requires_instagram_page)
         page_id = str(page.get("id", "")).strip()
         if not page_id:
             raise RuntimeError(f"FacebookページIDを取得できませんでした: {page}")
@@ -227,27 +275,49 @@ def main() -> int:
 
         instagram_account = page.get("instagram_business_account") or {}
         instagram_id = str(instagram_account.get("id", "")).strip()
-        if not instagram_id:
+        if requires_instagram_page and not instagram_id:
             raise RuntimeError(
                 f"Facebookページ「{page.get('name')}」にInstagram Business Accountが接続されていません。"
             )
 
-        updates = {
-            "META_APP_ID": app["app_id"],
-            "META_APP_SECRET": app["app_secret"],
-            "META_REDIRECT_URI": app["redirect_uri"],
-            "INSTAGRAM_USER_ID": instagram_id,
-            "INSTAGRAM_ACCESS_TOKEN": user_token,
-            "INSTAGRAM_LAST_REFRESHED_AT": datetime.now(timezone.utc).isoformat(),
-            "FACEBOOK_PAGE_ID": page_id,
-            "FACEBOOK_PAGE_ACCESS_TOKEN": page_token,
-            "FACEBOOK_USER_ACCESS_TOKEN": user_token,
-            "FACEBOOK_LAST_REFRESHED_AT": datetime.now(timezone.utc).isoformat(),
-        }
+        updates = {}
+        if args.service == "combined":
+            updates.update(
+                {
+                    "META_APP_ID": app["app_id"],
+                    "META_APP_SECRET": app["app_secret"],
+                    "META_REDIRECT_URI": app["redirect_uri"],
+                }
+            )
+        if args.service in ("combined", "instagram"):
+            updates.update(
+                {
+                    "INSTAGRAM_APP_ID": app["app_id"],
+                    "INSTAGRAM_APP_SECRET": app["app_secret"],
+                    "INSTAGRAM_REDIRECT_URI": app["redirect_uri"],
+                    "INSTAGRAM_USER_ID": instagram_id,
+                    "INSTAGRAM_ACCESS_TOKEN": user_token,
+                    "INSTAGRAM_LAST_REFRESHED_AT": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+        if args.service in ("combined", "facebook"):
+            updates.update(
+                {
+                    "FACEBOOK_APP_ID": app["app_id"],
+                    "FACEBOOK_APP_SECRET": app["app_secret"],
+                    "FACEBOOK_REDIRECT_URI": app["redirect_uri"],
+                    "FACEBOOK_PAGE_ID": page_id,
+                    "FACEBOOK_PAGE_ACCESS_TOKEN": page_token,
+                    "FACEBOOK_USER_ACCESS_TOKEN": user_token,
+                    "FACEBOOK_LAST_REFRESHED_AT": datetime.now(timezone.utc).isoformat(),
+                }
+            )
         if long_lived.get("expires_in"):
             expires_at = iso_at(int(long_lived["expires_in"]))
-            updates["INSTAGRAM_ACCESS_TOKEN_EXPIRES_AT"] = expires_at
-            updates["FACEBOOK_USER_ACCESS_TOKEN_EXPIRES_AT"] = expires_at
+            if args.service in ("combined", "instagram"):
+                updates["INSTAGRAM_ACCESS_TOKEN_EXPIRES_AT"] = expires_at
+            if args.service in ("combined", "facebook"):
+                updates["FACEBOOK_USER_ACCESS_TOKEN_EXPIRES_AT"] = expires_at
         save_env_values(updates)
 
         print("\nMeta OAuth complete.")

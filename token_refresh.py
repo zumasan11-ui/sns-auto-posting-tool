@@ -144,18 +144,25 @@ def refresh_threads(force: bool = False) -> Dict[str, Any]:
     return {"service": "threads", "status": "refreshed", "expires_in": expires_in}
 
 
-def meta_app_credentials() -> Tuple[str, str]:
-    _id_key, app_id = first_env("META_APP_ID", "FACEBOOK_APP_ID", "INSTAGRAM_APP_ID")
-    _secret_key, app_secret = first_env("META_APP_SECRET", "FACEBOOK_APP_SECRET", "INSTAGRAM_APP_SECRET")
+def meta_app_credentials(service: str = "combined") -> Tuple[str, str]:
+    if service == "instagram":
+        _id_key, app_id = first_env("INSTAGRAM_APP_ID", "META_APP_ID")
+        _secret_key, app_secret = first_env("INSTAGRAM_APP_SECRET", "META_APP_SECRET")
+    elif service == "facebook":
+        _id_key, app_id = first_env("FACEBOOK_APP_ID", "META_APP_ID")
+        _secret_key, app_secret = first_env("FACEBOOK_APP_SECRET", "META_APP_SECRET")
+    else:
+        _id_key, app_id = first_env("META_APP_ID", "FACEBOOK_APP_ID", "INSTAGRAM_APP_ID")
+        _secret_key, app_secret = first_env("META_APP_SECRET", "FACEBOOK_APP_SECRET", "INSTAGRAM_APP_SECRET")
     if not app_id or not app_secret:
         raise ReauthRequired(
-            "Meta系トークン更新には META_APP_ID と META_APP_SECRET が必要です。"
+            "Meta系トークン更新には対象サービスのAPP_IDとAPP_SECRETが必要です。"
         )
     return app_id, app_secret
 
 
-def exchange_meta_long_lived_token(token: str) -> Dict[str, Any]:
-    app_id, app_secret = meta_app_credentials()
+def exchange_meta_long_lived_token(token: str, service: str = "combined") -> Dict[str, Any]:
+    app_id, app_secret = meta_app_credentials(service)
     return request_json(
         "GET",
         f"{META_GRAPH_BASE_URL}/oauth/access_token",
@@ -176,7 +183,7 @@ def refresh_instagram(force: bool = False) -> Dict[str, Any]:
     values = require_values("INSTAGRAM_ACCESS_TOKEN")
     token = values["INSTAGRAM_ACCESS_TOKEN"]
     try:
-        data = exchange_meta_long_lived_token(token)
+        data = exchange_meta_long_lived_token(token, "instagram")
     except ReauthRequired:
         data = request_json(
             "GET",
@@ -217,7 +224,7 @@ def refresh_facebook(force: bool = False) -> Dict[str, Any]:
         )
 
     try:
-        data = exchange_meta_long_lived_token(user_token)
+        data = exchange_meta_long_lived_token(user_token, "facebook")
         user_token = str(data.get("access_token") or user_token)
     except ReauthRequired:
         pass
