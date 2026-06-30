@@ -102,6 +102,7 @@ jobs:
       GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}
       NOTION_STATUS_PROPERTY: ${{ secrets.NOTION_STATUS_PROPERTY }}
       NOTION_ERROR_PROPERTY: ${{ secrets.NOTION_ERROR_PROPERTY }}
+      GH_TOKEN: ${{ secrets.GH_SECRETS_TOKEN }}
 
     steps:
       - name: Checkout
@@ -197,3 +198,7 @@ jobs:
       - name: Execute scheduled slot
         if: steps.mode.outputs.slot != 'prepare' && steps.mode.outputs.run_now != 'true'
         run: python daily_auto_post.py --execute --slot "${{ steps.mode.outputs.slot }}"
+
+      - name: Sync refreshed tokens back to GitHub Secrets
+        if: always() && env.GH_TOKEN != ''
+        run: python scripts/sync_env_to_github_secrets.py

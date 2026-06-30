@@ -44,6 +44,7 @@ from reels_generator import (
     write_structured_mp4,
 )
 from sheets_api import append_values, build_sheets_service, load_sheets_config
+from token_refresh import ensure_token_fresh
 from youtube_poster import upload_youtube_short
 
 
@@ -787,14 +788,17 @@ def create_x_post(text: str, image_url: Optional[str], image_path: Optional[str]
 
 def execute_task(task: Dict[str, Any]) -> str:
     kind = task["kind"]
+    platform = task.get("platform")
+    if platform in {"threads", "instagram", "facebook", "linkedin", "youtube"}:
+        ensure_token_fresh(platform, strict=False)
     if kind == "text":
         text = task["text"]
         image_url = task.get("image_url")
-        if task["platform"] == "x":
+        if platform == "x":
             return create_x_post(text, image_url, task.get("image_path"))
-        if task["platform"] == "threads":
+        if platform == "threads":
             return create_threads_image_post(text, image_url)
-        if task["platform"] == "facebook":
+        if platform == "facebook":
             credentials = load_facebook_credentials()
             if image_url:
                 return create_facebook_photo_post(credentials, image_url, text)

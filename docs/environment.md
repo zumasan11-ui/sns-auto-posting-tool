@@ -8,6 +8,12 @@
 pip install -r requirements.txt
 ```
 
+GitHub Actionsで更新済みトークンをSecretsへ書き戻す値:
+
+```env
+GH_SECRETS_TOKEN=
+```
+
 主な依存:
 
 - `tweepy`: X投稿
