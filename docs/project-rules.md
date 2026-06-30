@@ -43,5 +43,8 @@
 - APIキー、アクセストークン、クライアントシークレット、JSONキーを扱う処理では値をマスクまたは非表示にする
 - コミット前に `python3 scripts/secret_scan.py --mode staged` を実行する。初回は `bash scripts/install_git_hooks.sh` でpre-commit hookを入れる
 - GitHub ActionsではSecretsから環境変数を読み込む構成にし、コードやworkflowへ実値を書かない
+- APIキー、アクセストークン、クライアントシークレット、JSON秘密鍵の取得、`.env` への保存、GitHub Secretsへの反映はCodexが担当する
+- 秘密情報を取得・保存・登録するときも、チャット、README、docs、ログ、Actions出力には実値を表示しない
+- ユーザー本人の操作が必要なのは、ログイン、OAuth認証、利用規約同意、本人確認、権限付与など本人しか実行できない操作だけにする
 - ユーザーが作った生成物を勝手に削除しない
 - 既存テンプレートを壊す大きな変更を、互換性なしで入れない
