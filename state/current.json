@@ -1,5 +1,5 @@
 {
-  "status": "error",
+  "status": "completed",
   "page_id": "38d26376-69c6-8060-81fd-dc7595296e5a",
   "page_url": "https://app.notion.com/p/38d2637669c6806081fddc7595296e5a",
   "title": "広告分析",
@@ -152,5 +152,6 @@
       "posted_at": "2026-06-30T15:27:48.095770+09:00",
       "error": ""
     }
-  ]
+  ],
+  "completed_at": "2026-06-30T22:37:57.307706+09:00"
 }
