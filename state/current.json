@@ -41,7 +41,8 @@
       "text": "あいうえお",
       "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28424583990/source/notion_image_01.png",
       "image_path": "deliverables/auto_post/28424583990/source/notion_image_01.png",
-      "status": "pending"
+      "status": "error",
+      "error": ".env に必要な値がありません: THREADS_USER_ID\n.env.example を見ながら .env に Threads の値を入れてください。"
     },
     {
       "id": "facebook-1",
