@@ -190,6 +190,56 @@ def update_notion_status(page_id: str, status: str, error: str = "") -> None:
     update_page(config, page_id, properties=properties)
 
 
+def platform_property_for_task(task: Dict[str, Any]) -> Optional[str]:
+    platform = task.get("platform")
+    if platform == "x":
+        return "X"
+    if platform == "threads":
+        return "Threads"
+    if platform == "instagram":
+        return "Instagram"
+    if platform == "facebook":
+        return "Facebook"
+    if platform == "linkedin":
+        return "LinkedIn"
+    if platform == "youtube":
+        return "YouTube"
+    return None
+
+
+def update_notion_platform_status(page_id: str, platform_property: str, status: str) -> None:
+    config = load_notion_config()
+    db_props = database_properties(config)
+    prop = db_props.get(platform_property)
+    if not prop:
+        return
+    prop_type = prop.get("type", "status")
+    value = status_value_for(db_props, platform_property, prop_type, status)
+    update_page(config, page_id, properties=status_property_payload(platform_property, prop_type, value))
+
+
+def update_task_platform_status(state: Dict[str, Any], task: Dict[str, Any], status: str) -> None:
+    page_id = state.get("page_id")
+    platform_property = platform_property_for_task(task)
+    if not page_id or not platform_property:
+        return
+    update_notion_platform_status(page_id, platform_property, status)
+
+
+def refresh_completed_platform_statuses(state: Dict[str, Any]) -> None:
+    page_id = state.get("page_id")
+    if not page_id:
+        return
+    for platform_property in PLATFORM_STATUS_PROPERTIES:
+        platform_tasks = [
+            task
+            for task in state.get("tasks", [])
+            if platform_property_for_task(task) == platform_property
+        ]
+        if platform_tasks and all(task.get("status") == "posted" for task in platform_tasks):
+            update_notion_platform_status(page_id, platform_property, "完了")
+
+
 def oldest_page_by_status(statuses: Sequence[str]) -> Optional[Dict[str, Any]]:
     config = load_notion_config()
     db_props = database_properties(config)
@@ -814,27 +864,31 @@ def execute_due(slot: str, run_now: bool = False) -> Dict[str, Any]:
     errors: List[str] = []
     for task in due_tasks(state, slot, run_now):
         try:
+            update_task_platform_status(state, task, "進行中")
             task["post_url"] = execute_task(task)
             task["status"] = "posted"
             task["posted_at"] = now_jst().isoformat()
             task["error"] = ""
+            refresh_completed_platform_statuses(state)
         except Exception as error:
             task["status"] = "error"
             task["error"] = str(error)
             errors.append(f"{task.get('id')}: {error}")
-            break
+            try:
+                update_task_platform_status(state, task, "エラー")
+            except Exception as status_error:
+                print(f"Notion status update skipped: {status_error}", file=sys.stderr)
         finally:
             save_state(state)
 
     if errors:
         state["status"] = "error"
-        update_notion_status(state["page_id"], "エラー", "\n".join(errors))
         save_state(state)
         raise RuntimeError("\n".join(errors))
 
     if all(task.get("status") == "posted" for task in state.get("tasks", [])):
         append_sheet_row(state)
-        update_notion_status(state["page_id"], "完了")
+        refresh_completed_platform_statuses(state)
         state["status"] = "completed"
         state["completed_at"] = now_jst().isoformat()
         save_state(state)
