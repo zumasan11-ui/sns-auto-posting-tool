@@ -76,7 +76,8 @@
       "text": "かきくけこ、なにぬねの",
       "image_url": null,
       "image_path": null,
-      "status": "pending"
+      "status": "error",
+      "error": ".env に必要な値がありません: THREADS_USER_ID\n.env.example を見ながら .env に Threads の値を入れてください。"
     },
     {
       "id": "facebook-2",
