@@ -14,9 +14,9 @@ from urllib.parse import urlparse
 
 import requests
 from dotenv import load_dotenv
-from PIL import Image, ImageDraw
+from PIL import Image
 
-from carousel_generator import load_font, render_slide, save_pdf, wrap_text
+from carousel_generator import render_slide, render_text_slide, save_pdf
 from carousel_poster import post_instagram_carousel, post_linkedin_pdf
 from main import (
     build_client,
@@ -518,47 +518,24 @@ def chunked(values: Sequence[Any], size: int) -> List[List[Any]]:
 
 
 def render_carousel_business_slide(index: int, total: int, text: str) -> Image.Image:
-    canvas = Image.new("RGB", (1080, 1350), "#ffffff")
-    draw = ImageDraw.Draw(canvas)
-    label_font = load_font(30, bold=True)
-    title_font = load_font(58, bold=True)
-    body_font = load_font(44)
-    margin_x = 72
-
-    label = f"{index:02d}/{total:02d}"
-    badge = (margin_x, 54, margin_x + 160, 104)
-    bbox = draw.textbbox((0, 0), label, font=label_font)
-    draw.rounded_rectangle(badge, radius=25, fill="#111111")
-    draw.text(
-        (
-            badge[0] + (badge[2] - badge[0] - (bbox[2] - bbox[0])) / 2 - bbox[0],
-            badge[1] + (badge[3] - badge[1] - (bbox[3] - bbox[1])) / 2 - bbox[1] + 3,
-        ),
-        label,
-        font=label_font,
-        fill="#ffffff",
-    )
-
-    draw.text((margin_x, 170), "ビジネスモデル", font=title_font, fill="#111111")
-    y = 310
-    for line in wrap_text(strip_numbering(text), body_font, 1080 - margin_x * 2, 13):
-        draw.text((margin_x, y), line, font=body_font, fill="#222222")
-        y += 66
-    return canvas
+    return render_text_slide("ビジネスモデル", strip_numbering(text))
 
 
 def render_carousel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     slides = []
     image_urls = []
+    ad_index = 0
     for index, section in enumerate(sections, start=1):
         if section.number % 2 == 0:
             slide = render_carousel_business_slide(index, len(sections), section.text)
         else:
+            ad_index += 1
             image_path = section.images[0] if section.images else None
             if image_path is None:
                 raise RuntimeError("カルーセル生成に使う画像がありません。")
-            slide = render_slide(index, len(sections), "広告分析メモ", strip_numbering(section.text), Image.open(image_path))
+            ad_label = CIRCLED_DIGITS[ad_index - 1] if ad_index <= len(CIRCLED_DIGITS) else str(ad_index)
+            slide = render_slide(index, len(sections), f"広告分析{ad_label}", strip_numbering(section.text), Image.open(image_path))
         slide_path = output_dir / f"slide_{index:02d}.png"
         slide.save(slide_path)
         slides.append(slide)
