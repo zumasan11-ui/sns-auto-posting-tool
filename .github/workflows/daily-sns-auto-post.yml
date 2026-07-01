@@ -164,6 +164,10 @@ jobs:
           Path(".env").write_text("\n".join(lines) + "\n", encoding="utf-8")
           PY
 
+      - name: Refresh SNS tokens proactively
+        run: python token_refresh.py all
+        continue-on-error: true
+
       - name: Decide mode
         id: mode
         run: |

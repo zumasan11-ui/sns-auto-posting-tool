@@ -12,15 +12,25 @@ python carousel_generator.py \
 
 処理:
 
-1. 広告スクショを読み込む
-2. 分析文からスライド本文を生成
-3. `slide_01.png` から `slide_10.png` を生成
-4. LinkedIn投稿用PDFも生成
+1. 広告スクショとNotion本文を読み込む
+2. 表紙を生成
+3. `広告分析①` と `ビジネスモデル` を交互に生成
+4. 最後にプロフィール誘導を生成
+5. LinkedIn投稿用PDFも生成
 
 出力:
 
 - `deliverables/carousel_test/slide_*.png`
 - `deliverables/carousel_test/linkedin_carousel.pdf`
+
+カルーセル構成:
+
+- 広告1件: 表紙 + 広告分析① + ビジネスモデル + プロフィール誘導 = 4枚
+- 広告2件: 6枚
+- 広告3件: 8枚
+- 広告4件: 10枚
+
+最大10枚に収めるため、広告は最大4件まで使います。足りない広告ページや空ページは追加しません。
 
 ## Reels動画生成フロー
 
@@ -45,24 +55,27 @@ python reels_generator.py \
 1. 表紙ページを生成
 2. 広告ページを生成
 3. ビジネスモデルページを生成
-4. ページ画像をMP4へ変換
-5. 必要に応じてBGMを合成
+4. ページ画像を無音MP4へ変換
+5. `thumbnail.png` を生成
+6. 固定BGM素材をループ/トリム
+7. MP4へBGMを合成
 
 出力:
 
 - `deliverables/reels/pages/*.png`
-- `deliverables/reels/structured_reel_no_fade.mp4`
+- `deliverables/reels/thumbnail.png`
+- `deliverables/reels/structured_reel_no_bgm.mp4`
 - `deliverables/reels/structured_reel.mp4`
 
 ## BGM合成
 
-現在は仮BGMをローカル生成して合成しています。
+現在は固定BGM素材を標準で合成しています。
 
-生成物:
+素材:
 
-- `deliverables/reels/bgm_upbeat.wav`
+- `assets/audio/reel_bgm_reference.m4a`
 
-本番では、権利クリア済み音源を使ってffmpegで差し替えます。
+固定仕様は [reel-short-video-template.md](reel-short-video-template.md) を正とします。
 
 ## Instagramカルーセル投稿フロー
 
@@ -116,6 +129,30 @@ python main.py --platform x --schedule-at "2026-06-29 09:00" -t "投稿文"
 ```bash
 python main.py --run-due
 ```
+
+## テキスト投稿の分散
+
+X、Threads、Facebookページのテキスト投稿は、広告分析/ビジネスモデルのセクションを朝・昼・夕・夜の4枠へ均等に分けます。
+
+投稿枠:
+
+- 朝: `07:30`
+- 昼: `12:00`
+- 夕: `16:00`
+- 夜: `19:30`
+
+同じセクションはX、Threads、Facebookページへ同じタイミングで投稿します。媒体ごとにはずらしません。
+
+例: 8広告分析の場合、広告分析とビジネスモデルで16セクションになり、各枠に4セクションずつ入ります。
+
+- `07:30`: セクション1をX/Threads/Facebookへ投稿
+- `07:31`: セクション2をX/Threads/Facebookへ投稿
+- `07:32`: セクション3をX/Threads/Facebookへ投稿
+- `07:33`: セクション4をX/Threads/Facebookへ投稿
+
+昼・夕・夜も同じく、枠内でセクションごとに1分ずつずらします。
+
+Threadsの日次投稿は、本文先頭に `【広告分析】` を付けます。Instagramカルーセル投稿のキャプションも `【広告分析】` 固定です。Reels/Shortsなど動画系は `勝ち広告を分析してみました` の既存キャプションを使います。
 
 保存:
 

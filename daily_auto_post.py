@@ -16,7 +16,15 @@ import requests
 from dotenv import load_dotenv
 from PIL import Image
 
-from carousel_generator import render_slide, render_text_slide, save_pdf
+from carousel_generator import (
+    CAROUSEL_COVER_TITLE_TEMPLATE,
+    CAROUSEL_MAX_ADS,
+    render_carousel_cover_slide,
+    render_carousel_ending_slide,
+    render_slide,
+    render_text_slide,
+    save_pdf,
+)
 from carousel_poster import post_instagram_carousel, post_linkedin_pdf
 from main import (
     build_client,
@@ -38,9 +46,16 @@ from notion_api import (
     update_page,
 )
 from reels_generator import (
+    REEL_BODY_FONT_STYLE,
+    REEL_COVER_DURATION,
+    REEL_COVER_FONT_STYLE,
+    REEL_COVER_TITLE_TEMPLATE,
+    REEL_STRUCTURED_PAGE_DURATION,
+    REEL_STRUCTURED_TRANSITION,
     ReelSpec,
     build_structured_reel_pages,
     post_instagram_reel,
+    save_reel_thumbnail,
     write_structured_mp4,
 )
 from sheets_api import append_values, build_sheets_service, load_sheets_config
@@ -57,6 +72,8 @@ STATE_FILE = STATE_DIR / "state" / "current.json"
 RUNTIME_DIR = Path("deliverables/auto_post")
 SLOTS = ("07:30", "12:00", "16:00", "19:30")
 TWO_SLOT_TIMES = ("07:30", "19:30")
+TEXT_PLATFORMS = ("x", "threads", "facebook")
+CAROUSEL_CAPTION = "【広告分析】"
 CIRCLED_DIGITS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
 PLATFORM_STATUS_PROPERTIES = ("X", "Threads", "Instagram", "Facebook", "LinkedIn", "YouTube")
 
@@ -462,7 +479,7 @@ def extract_companies(text: str) -> List[str]:
 def extract_period_text(text: str) -> str:
     match = re.search(r"掲載期間[:：]?\s*([^\n]+)", text)
     if not match:
-        return "○ヶ月"
+        return "◯ヶ月"
     value = match.group(1)
     year_match = re.search(r"([0-9０-９]+)\s*年", value)
     month_match = re.search(r"([0-9０-９]+)\s*ヶ?月", value)
@@ -470,7 +487,7 @@ def extract_period_text(text: str) -> str:
         return f"{year_match.group(1)}年"
     if month_match:
         return f"{month_match.group(1)}ヶ月"
-    return "○ヶ月"
+    return "◯ヶ月"
 
 
 def caption_for(sections: Sequence[AdSection], title: str = "勝ち広告を分析してみました") -> str:
@@ -482,6 +499,12 @@ def caption_for(sections: Sequence[AdSection], title: str = "勝ち広告を分�
     if not companies:
         companies.append("Notionページ内広告")
     return title + "\n" + "\n".join(f"引用元：{company}" for company in companies)
+
+
+def text_for_platform(platform: str, text: str) -> str:
+    if platform == "threads":
+        return f"{CAROUSEL_CAPTION}\n\n{text}".strip()
+    return text
 
 
 def infer_genre(business_text: str) -> str:
@@ -513,6 +536,16 @@ def distribute(items: Sequence[Any], slots: Sequence[str]) -> List[str]:
     return [slots[index * len(slots) // len(items)] for index, _item in enumerate(items)]
 
 
+def offset_minutes_by_slot(slots: Sequence[str]) -> List[int]:
+    counts: Dict[str, int] = {}
+    offsets: List[int] = []
+    for slot in slots:
+        offset = counts.get(slot, 0)
+        offsets.append(offset)
+        counts[slot] = offset + 1
+    return offsets
+
+
 def chunked(values: Sequence[Any], size: int) -> List[List[Any]]:
     return [list(values[index : index + size]) for index in range(0, len(values), size)]
 
@@ -525,21 +558,51 @@ def render_carousel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Di
     output_dir.mkdir(parents=True, exist_ok=True)
     slides = []
     image_urls = []
+    ad_sections = [section for section in sections if section.number % 2 == 1 and section.images][:CAROUSEL_MAX_ADS]
+    if not ad_sections:
+        raise RuntimeError("カルーセル生成に使う広告画像がありません。")
+
+    period = sections[0].period_text or "◯ヶ月"
+    cover_title = CAROUSEL_COVER_TITLE_TEMPLATE.format(period=period)
+    cover = render_carousel_cover_slide(cover_title, Image.open(ad_sections[0].images[0]))
+    cover_path = output_dir / "slide_01.png"
+    cover.save(cover_path)
+    slides.append(cover)
+    image_urls.append(cover_path)
+
     ad_index = 0
-    for index, section in enumerate(sections, start=1):
+    content_sections: List[AdSection] = []
+    allowed_ad_numbers = {section.number for section in ad_sections}
+    for section in sections:
+        if section.number % 2 == 1 and section.number not in allowed_ad_numbers:
+            continue
         if section.number % 2 == 0:
-            slide = render_carousel_business_slide(index, len(sections), section.text)
+            previous_ad_number = section.number - 1
+            if previous_ad_number not in allowed_ad_numbers:
+                continue
+        content_sections.append(section)
+
+    for index, section in enumerate(content_sections, start=2):
+        if section.number % 2 == 0:
+            slide = render_carousel_business_slide(index, 10, section.text)
         else:
             ad_index += 1
             image_path = section.images[0] if section.images else None
             if image_path is None:
                 raise RuntimeError("カルーセル生成に使う画像がありません。")
             ad_label = CIRCLED_DIGITS[ad_index - 1] if ad_index <= len(CIRCLED_DIGITS) else str(ad_index)
-            slide = render_slide(index, len(sections), f"広告{ad_label}", strip_numbering(section.text), Image.open(image_path))
+            slide = render_slide(index, 10, f"広告分析{ad_label}", strip_numbering(section.text), Image.open(image_path))
         slide_path = output_dir / f"slide_{index:02d}.png"
         slide.save(slide_path)
         slides.append(slide)
         image_urls.append(slide_path)
+
+    ending = render_carousel_ending_slide()
+    ending_path = output_dir / f"slide_{len(slides) + 1:02d}.png"
+    ending.save(ending_path)
+    slides.append(ending)
+    image_urls.append(ending_path)
+
     pdf_path = output_dir / "linkedin_carousel.pdf"
     save_pdf(slides, pdf_path)
     return {"slides": image_urls, "pdf": pdf_path}
@@ -553,19 +616,28 @@ def render_reel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Path:
         raise RuntimeError("Reels生成に使う画像がありません。")
     ad_texts = [strip_numbering(section.text) for section in ad_sections]
     business_texts = [strip_numbering(section.text) for section in business_sections] or ad_texts
-    period = sections[0].period_text or "○ヶ月"
-    title = f"なぜこの広告は{period}回っているのか？"
+    period = sections[0].period_text or "◯ヶ月"
+    title = REEL_COVER_TITLE_TEMPLATE.format(period=period)
+    reel_spec = ReelSpec(
+        slide_duration=REEL_STRUCTURED_PAGE_DURATION,
+        fade_duration=0,
+        transition=REEL_STRUCTURED_TRANSITION,
+    )
     pages = build_structured_reel_pages(
         ad_images=ad_images,
         ad_texts=ad_texts,
         business_texts=business_texts,
         output_dir=output_dir / "pages",
         cover_title=title,
-        max_ads=min(10, len(ad_images)),
-        spec=ReelSpec(slide_duration=2.0, fade_duration=0, transition="none"),
+        max_ads=min(5, len(ad_images)),
+        font_style=REEL_BODY_FONT_STYLE,
+        cover_font_style=REEL_COVER_FONT_STYLE,
+        cover_duration=REEL_COVER_DURATION,
+        spec=reel_spec,
     )
+    save_reel_thumbnail(pages, output_dir)
     video_path = output_dir / "reel.mp4"
-    write_structured_mp4(pages, video_path, ReelSpec(slide_duration=2.0, fade_duration=0, transition="none"))
+    write_structured_mp4(pages, video_path, reel_spec)
     return video_path
 
 
@@ -607,28 +679,30 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
     asset_prefix = Path("runs") / run_id
     tasks: List[Dict[str, Any]] = []
     text_slots = ["now"] * len(sections) if run_now else distribute(sections, SLOTS)
-    for section, slot in zip(sections, text_slots):
+    text_offsets = [0] * len(sections) if run_now else offset_minutes_by_slot(text_slots)
+    for section, slot, offset_minutes in zip(sections, text_slots, text_offsets):
         text = strip_numbering(section.text)
         image_url = None
         image_path = None
         if section.images:
             image_path = str(section.images[0])
             image_url = copy_public(section.images[0], asset_prefix / "source" / section.images[0].name)
-        for platform in ("x", "threads", "facebook"):
+        for platform in TEXT_PLATFORMS:
             tasks.append(
                 {
                     "id": f"{platform}-{section.number}",
                     "kind": "text",
                     "platform": platform,
                     "slot": slot,
-                    "text": text,
+                    "slot_offset_minutes": offset_minutes,
+                    "text": text_for_platform(platform, text),
                     "image_url": image_url,
                     "image_path": image_path,
                     "status": "pending",
                 }
             )
 
-    content_chunks = chunked(sections[:], 10)
+    content_chunks = chunked(sections[:], CAROUSEL_MAX_ADS * 2)
     media_slots = ["now"] * len(content_chunks) if run_now else (["19:30"] if len(content_chunks) == 1 else distribute(content_chunks, TWO_SLOT_TIMES))
     for chunk_index, (chunk, slot) in enumerate(zip(content_chunks, media_slots), start=1):
         carousel = render_carousel_chunk(chunk, work_dir / f"carousel_{chunk_index:02d}")
@@ -640,8 +714,10 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
             slide_urls.append(slide_urls[0])
         pdf_public_url = copy_public(carousel["pdf"], asset_prefix / f"carousel_{chunk_index:02d}" / "linkedin_carousel.pdf")
         reel_path = render_reel_chunk(chunk, work_dir / f"reel_{chunk_index:02d}")
+        thumbnail_path = reel_path.parent / "thumbnail.png"
         reel_url = copy_public(reel_path, asset_prefix / f"reel_{chunk_index:02d}" / "reel.mp4")
-        caption = caption_for(chunk)
+        thumbnail_url = copy_public(thumbnail_path, asset_prefix / f"reel_{chunk_index:02d}" / "thumbnail.png")
+        video_caption = caption_for(chunk)
         tasks.extend(
             [
                 {
@@ -649,7 +725,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "kind": "carousel",
                     "platform": "instagram",
                     "slot": slot,
-                    "caption": caption,
+                    "caption": CAROUSEL_CAPTION,
                     "image_urls": slide_urls,
                     "status": "pending",
                 },
@@ -658,7 +734,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "kind": "linkedin_pdf",
                     "platform": "linkedin",
                     "slot": slot,
-                    "caption": caption,
+                    "caption": video_caption,
                     "pdf_path": str(carousel["pdf"]),
                     "pdf_url": pdf_public_url,
                     "status": "pending",
@@ -668,7 +744,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "kind": "reel",
                     "platform": "instagram",
                     "slot": slot,
-                    "caption": caption,
+                    "caption": video_caption,
                     "video_url": reel_url,
                     "status": "pending",
                 },
@@ -678,9 +754,11 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "platform": "youtube",
                     "slot": slot,
                     "title": "勝ち広告を分析してみました #Shorts",
-                    "description": caption,
+                    "description": video_caption,
                     "video_path": str(reel_path),
                     "video_url": reel_url,
+                    "thumbnail_path": str(thumbnail_path),
+                    "thumbnail_url": thumbnail_url,
                     "status": "pending",
                 },
             ]
@@ -800,18 +878,50 @@ def execute_task(task: Dict[str, Any]) -> str:
             response.raise_for_status()
             video_path.parent.mkdir(parents=True, exist_ok=True)
             video_path.write_bytes(response.content)
-        return upload_youtube_short(video_path, task["title"], task["description"], ["広告", "マーケティング", "Shorts"])
+        thumbnail_path = Path(task["thumbnail_path"]) if task.get("thumbnail_path") else None
+        if thumbnail_path and not thumbnail_path.exists() and task.get("thumbnail_url"):
+            response = requests.get(task["thumbnail_url"], timeout=60)
+            response.raise_for_status()
+            thumbnail_path.parent.mkdir(parents=True, exist_ok=True)
+            thumbnail_path.write_bytes(response.content)
+        return upload_youtube_short(
+            video_path,
+            task["title"],
+            task["description"],
+            ["広告", "マーケティング", "Shorts"],
+            thumbnail_path=thumbnail_path if thumbnail_path and thumbnail_path.exists() else None,
+        )
     raise RuntimeError(f"未対応タスクです: {task}")
 
 
 def due_tasks(state: Dict[str, Any], slot: str, run_now: bool) -> List[Dict[str, Any]]:
     if run_now:
         return [task for task in state.get("tasks", []) if task.get("status") != "posted"]
-    return [
+    tasks = [
         task
         for task in state.get("tasks", [])
         if task.get("slot") == slot and task.get("status") != "posted"
     ]
+    return sorted(
+        tasks,
+        key=lambda task: (
+            int(task.get("slot_offset_minutes") or 0),
+            0 if task.get("kind") == "text" else 1,
+            str(task.get("id", "")),
+        ),
+    )
+
+
+def wait_for_slot_offset(task: Dict[str, Any], started_at: float, run_now: bool) -> None:
+    if run_now:
+        return
+    offset_minutes = int(task.get("slot_offset_minutes") or 0)
+    if offset_minutes <= 0:
+        return
+    target_elapsed = offset_minutes * 60
+    remaining = target_elapsed - (time.monotonic() - started_at)
+    if remaining > 0:
+        time.sleep(remaining)
 
 
 def append_sheet_row(state: Dict[str, Any]) -> None:
@@ -843,8 +953,10 @@ def execute_due(slot: str, run_now: bool = False) -> Dict[str, Any]:
         return state
 
     errors: List[str] = []
+    started_at = time.monotonic()
     for task in due_tasks(state, slot, run_now):
         try:
+            wait_for_slot_offset(task, started_at, run_now)
             update_task_platform_status(state, task, "進行中")
             task["post_url"] = execute_task(task)
             task["status"] = "posted"

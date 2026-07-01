@@ -1,6 +1,7 @@
 import argparse
 import mimetypes
 import os
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -16,6 +17,8 @@ YOUTUBE_REQUIRED_ENV_KEYS = (
 YOUTUBE_SCOPES = ("https://www.googleapis.com/auth/youtube.upload",)
 DEFAULT_CATEGORY_ID = "22"
 DEFAULT_PRIVACY_STATUS = "public"
+DEFAULT_THUMBNAIL_NAME = "thumbnail.png"
+DEFAULT_THUMBNAIL_RETRY_DELAYS = (0, 45, 180)
 
 
 def load_youtube_credentials() -> Dict[str, str]:
@@ -93,11 +96,16 @@ def upload_youtube_short(
     description: str,
     tags: Optional[List[str]] = None,
     privacy_status: str = DEFAULT_PRIVACY_STATUS,
+    thumbnail_path: Optional[Path] = None,
 ) -> str:
     if not video_path.exists():
         raise RuntimeError(f"MP4ファイルが見つかりません: {video_path}")
     if video_path.suffix.lower() != ".mp4":
         raise RuntimeError("YouTube Shorts投稿には .mp4 ファイルを指定してください。")
+    if thumbnail_path is None:
+        candidate = video_path.parent / DEFAULT_THUMBNAIL_NAME
+        if candidate.exists():
+            thumbnail_path = candidate
 
     credentials = load_youtube_credentials()
     youtube = build_youtube_client(credentials)
@@ -135,6 +143,9 @@ def upload_youtube_short(
     if not video_id:
         raise RuntimeError(f"YouTube動画IDを取得できませんでした: {response}")
 
+    if thumbnail_path:
+        set_youtube_thumbnail_with_retries(video_id, thumbnail_path)
+
     return f"https://www.youtube.com/shorts/{video_id}"
 
 
@@ -163,6 +174,26 @@ def set_youtube_thumbnail(video_id: str, thumbnail_path: Path) -> str:
         raise RuntimeError(f"YouTubeサムネ設定に失敗しました: {error}") from error
 
     return f"https://www.youtube.com/shorts/{video_id.strip()}"
+
+
+def set_youtube_thumbnail_with_retries(
+    video_id: str,
+    thumbnail_path: Path,
+    retry_delays: tuple[int, ...] = DEFAULT_THUMBNAIL_RETRY_DELAYS,
+) -> str:
+    last_error: Optional[Exception] = None
+    last_url = ""
+    for delay in retry_delays:
+        if delay > 0:
+            time.sleep(delay)
+        try:
+            last_url = set_youtube_thumbnail(video_id, thumbnail_path)
+        except Exception as error:
+            last_error = error
+    if last_url:
+        return last_url
+    assert last_error is not None
+    raise last_error
 
 
 def parse_args() -> argparse.Namespace:
@@ -204,10 +235,8 @@ def main() -> int:
         args.description,
         args.tags,
         args.privacy_status,
+        Path(args.thumbnail) if args.thumbnail else None,
     )
-    if args.thumbnail:
-        video_id = url.rstrip("/").split("/")[-1]
-        set_youtube_thumbnail(video_id, Path(args.thumbnail))
     print(url)
     return 0
 

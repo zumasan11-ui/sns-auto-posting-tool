@@ -1,5 +1,6 @@
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -24,6 +25,15 @@ DEFAULT_SLIDE_GLOB = "slide_*.png"
 DEFAULT_ENDING_LINES = ("続きはプロフィールへ", "毎日広告分析を発信中")
 REEL_PREVIEW_PATH = Path("deliverables/reels/template_preview.png")
 AD_NUMBER_LABELS = ("①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩")
+REEL_COVER_TITLE_TEMPLATE = "なぜこの広告は{period}回っているのか？"
+REEL_COVER_FONT_STYLE = "noto"
+REEL_BODY_FONT_STYLE = "mincho"
+REEL_COVER_DURATION = 1.5
+REEL_STRUCTURED_PAGE_DURATION = 3.0
+REEL_STRUCTURED_TRANSITION = "none"
+REEL_BGM_ENABLED = True
+REEL_BGM_PATH = Path("assets/audio/reel_bgm_reference.m4a")
+REEL_THUMBNAIL_FILENAME = "thumbnail.png"
 SOFT_BODY_FONT_PATHS = (
     "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc",
     "/System/Library/Fonts/Supplemental/ChalkboardSE.ttc",
@@ -177,6 +187,61 @@ def load_cover_font(size: int, style: str = "gothic") -> object:
     return load_font(size, bold=True)
 
 
+def fit_reel_text_lines(
+    text: str,
+    font_style: str,
+    max_width: int,
+    max_height: int,
+    preferred_size: int,
+    preferred_line_height: int,
+    min_size: int,
+    max_lines: int,
+) -> tuple[object, List[str], int, bool]:
+    preferred_font = load_soft_body_font(preferred_size, font_style)
+    full_lines = wrap_text(text, preferred_font, max_width, 10000)
+    if len(full_lines) <= max_lines and len(full_lines) * preferred_line_height <= max_height:
+        return preferred_font, full_lines, preferred_line_height, False
+
+    for size in range(preferred_size, min_size - 1, -2):
+        font = load_soft_body_font(size, font_style)
+        line_height = round(size * 1.48)
+        lines = wrap_text(text, font, max_width, 10000)
+        if len(lines) <= max_lines and len(lines) * line_height <= max_height:
+            return font, lines, line_height, True
+
+    font = load_soft_body_font(min_size, font_style)
+    line_height = round(min_size * 1.48)
+    return font, wrap_text(text, font, max_width, max(1, max_height // line_height)), line_height, True
+
+
+def draw_reel_text_block(
+    draw: ImageDraw.ImageDraw,
+    lines: Sequence[str],
+    x: int,
+    y: int,
+    font: object,
+    fill: str,
+    line_height: int,
+) -> None:
+    for line in lines:
+        draw.text((x, y), line, font=font, fill=fill)
+        y += line_height
+
+
+def draw_reel_centered_text_block(
+    draw: ImageDraw.ImageDraw,
+    lines: Sequence[str],
+    box: tuple[int, int, int, int],
+    font: object,
+    fill: str,
+    line_height: int,
+) -> None:
+    x1, y1, _x2, y2 = box
+    total_height = len(lines) * line_height
+    y = y1 + max(0, (y2 - y1 - total_height) // 2)
+    draw_reel_text_block(draw, lines, x1, y, font, fill, line_height)
+
+
 def render_reel_analysis_slide(
     index: int,
     total: int,
@@ -187,18 +252,34 @@ def render_reel_analysis_slide(
 ) -> Image.Image:
     frame = Image.new("RGB", (spec.width, spec.height), spec.background)
     draw = ImageDraw.Draw(frame)
-    body_font = load_soft_body_font(42, font_style)
     black = "#111111"
 
     margin_x = 72
     ad_number = AD_NUMBER_LABELS[index - 1] if 1 <= index <= len(AD_NUMBER_LABELS) else str(index)
-    draw_centered_badge(draw, f"広告{ad_number}", (margin_x, 128, margin_x + 230, 192))
+    draw_centered_badge(draw, f"広告分析{ad_number}", (margin_x, 128, margin_x + 330, 192))
 
     text_top = 328
-    text_lines = wrap_text(text, body_font, spec.width - margin_x * 2, 9)
-    for line in text_lines:
-        draw.text((margin_x, text_top), line, font=body_font, fill=black)
-        text_top += 62
+    body_font, text_lines, line_height, resized = fit_reel_text_lines(
+        text,
+        font_style,
+        spec.width - margin_x * 2,
+        490,
+        preferred_size=42,
+        preferred_line_height=62,
+        min_size=31,
+        max_lines=9,
+    )
+    if resized:
+        draw_reel_centered_text_block(
+            draw,
+            text_lines,
+            (margin_x, 300, spec.width - margin_x, 815),
+            body_font,
+            black,
+            line_height,
+        )
+    else:
+        draw_reel_text_block(draw, text_lines, margin_x, text_top, body_font, black, line_height)
 
     image_top = 855
     image_box = (90, image_top, spec.width - 90, 1635)
@@ -236,10 +317,11 @@ def render_reel_cover_slide(
         bbox = draw.textbbox((0, 0), text, font=font)
         draw.text((margin_x, y - bbox[1]), text, font=font, fill=fill)
 
-    if "◯ヶ月" in title:
+    title_match = re.fullmatch(r"なぜこの広告は(.+)回っているのか？", title)
+    if title_match:
         title_top = 290
         line_1 = "なぜこの広告は"
-        line_2 = "◯ヶ月"
+        line_2 = title_match.group(1)
         line_3 = "回っているのか？"
 
         draw_left_text(line_1, title_top, title_font)
@@ -281,17 +363,33 @@ def render_business_model_slide(
 ) -> Image.Image:
     frame = Image.new("RGB", (spec.width, spec.height), spec.background)
     draw = ImageDraw.Draw(frame)
-    body_font = load_soft_body_font(48, font_style)
     black = "#111111"
     margin_x = 72
 
     draw_centered_badge(draw, "ビジネスモデル", (margin_x, 128, margin_x + 410, 192))
 
     text_top = 360
-    text_lines = wrap_text(text, body_font, spec.width - margin_x * 2, 12)
-    for line in text_lines:
-        draw.text((margin_x, text_top), line, font=body_font, fill=black)
-        text_top += 72
+    body_font, text_lines, line_height, resized = fit_reel_text_lines(
+        text,
+        font_style,
+        spec.width - margin_x * 2,
+        1040,
+        preferred_size=48,
+        preferred_line_height=72,
+        min_size=32,
+        max_lines=12,
+    )
+    if resized:
+        draw_reel_centered_text_block(
+            draw,
+            text_lines,
+            (margin_x, 320, spec.width - margin_x, 1450),
+            body_font,
+            black,
+            line_height,
+        )
+    else:
+        draw_reel_text_block(draw, text_lines, margin_x, text_top, body_font, black, line_height)
 
     return frame
 
@@ -393,6 +491,52 @@ def get_ffmpeg_command() -> List[str]:
     return [imageio_ffmpeg.get_ffmpeg_exe()]
 
 
+def structured_video_duration(pages: Sequence[ReelPage], spec: ReelSpec) -> float:
+    return sum(page.duration for page in pages) + spec.ending_duration
+
+
+def mux_bgm(video_path: Path, bgm_path: Path, output_path: Path) -> None:
+    if not bgm_path.exists():
+        raise RuntimeError(f"BGM素材が見つかりません: {bgm_path}")
+    ffmpeg = get_ffmpeg_command()
+    command = [
+        *ffmpeg,
+        "-y",
+        "-i",
+        str(video_path),
+        "-stream_loop",
+        "-1",
+        "-i",
+        str(bgm_path),
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a:0",
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-shortest",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ]
+    process = subprocess.run(command, capture_output=True, text=True)
+    if process.returncode != 0:
+        raise RuntimeError(f"BGM合成に失敗しました: {process.stderr}")
+
+
+def save_reel_thumbnail(pages: Sequence[ReelPage], output_dir: Path) -> Path:
+    if not pages:
+        raise RuntimeError("サムネ生成にはページが必要です。")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    thumbnail_path = output_dir / REEL_THUMBNAIL_FILENAME
+    Image.open(pages[0].path).convert("RGB").save(thumbnail_path)
+    return thumbnail_path
+
+
 def write_mp4(slide_paths: Sequence[Path], output_path: Path, spec: ReelSpec) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     ffmpeg = get_ffmpeg_command()
@@ -442,8 +586,18 @@ def write_mp4(slide_paths: Sequence[Path], output_path: Path, spec: ReelSpec) ->
         raise RuntimeError(f"ffmpeg が失敗しました: {stderr}")
 
 
-def write_structured_mp4(pages: Sequence[ReelPage], output_path: Path, spec: ReelSpec) -> None:
+def write_structured_mp4(
+    pages: Sequence[ReelPage],
+    output_path: Path,
+    spec: ReelSpec,
+    with_bgm: bool = REEL_BGM_ENABLED,
+    bgm_path: Path = REEL_BGM_PATH,
+) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    video_output_path = output_path
+    if with_bgm:
+        video_output_path = output_path.with_name(f"{output_path.stem}_no_bgm{output_path.suffix}")
+
     ffmpeg = get_ffmpeg_command()
     command = [
         *ffmpeg,
@@ -471,7 +625,7 @@ def write_structured_mp4(pages: Sequence[ReelPage], output_path: Path, spec: Ree
         "medium",
         "-crf",
         "20",
-        str(output_path),
+        str(video_output_path),
     ]
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     assert process.stdin is not None
@@ -489,6 +643,9 @@ def write_structured_mp4(pages: Sequence[ReelPage], output_path: Path, spec: Ree
     return_code = process.wait()
     if return_code != 0:
         raise RuntimeError(f"ffmpeg が失敗しました: {stderr}")
+
+    if with_bgm:
+        mux_bgm(video_output_path, bgm_path, output_path)
 
 
 def build_test_carousel(
@@ -525,9 +682,9 @@ def build_structured_reel_pages(
     output_dir: Path,
     cover_title: str,
     max_ads: int = 5,
-    font_style: str = "mincho",
-    cover_font_style: str = "gothic",
-    cover_duration: float = 1.5,
+    font_style: str = REEL_BODY_FONT_STYLE,
+    cover_font_style: str = REEL_COVER_FONT_STYLE,
+    cover_duration: float = REEL_COVER_DURATION,
     spec: ReelSpec = ReelSpec(),
 ) -> List[ReelPage]:
     if not ad_images:
@@ -648,9 +805,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--input-dir", default="deliverables/carousel_test")
     parser.add_argument("--output", default="deliverables/reels/reel.mp4")
     parser.add_argument("--fps", type=int, default=30)
-    parser.add_argument("--slide-duration", type=float, default=2.0)
+    parser.add_argument("--slide-duration", type=float, default=REEL_STRUCTURED_PAGE_DURATION)
     parser.add_argument("--fade-duration", type=float, default=0.35)
-    parser.add_argument("--transition", choices=("fade", "none", "page"), default="none")
+    parser.add_argument("--transition", choices=("fade", "none", "page"), default=REEL_STRUCTURED_TRANSITION)
     parser.add_argument("--ending-duration", type=float, default=2.0)
     parser.add_argument("--source-images", nargs="*", type=Path, help="テスト用に交互配置する元画像")
     parser.add_argument("--text", help="テスト用カルーセルに入れる分析文")
@@ -661,16 +818,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--template-preview", action="store_true", help="動画を作らずReels用テンプレ画像を1枚だけ生成します。")
     parser.add_argument("--template-image", type=Path, help="テンプレ確認に使う画像")
     parser.add_argument("--template-output", type=Path, default=REEL_PREVIEW_PATH)
-    parser.add_argument("--font-style", choices=tuple(BODY_FONT_STYLES), default="mincho")
-    parser.add_argument("--cover-font-style", choices=tuple(COVER_FONT_STYLES), default="noto")
-    parser.add_argument("--cover-duration", type=float, default=1.5)
+    parser.add_argument("--font-style", choices=tuple(BODY_FONT_STYLES), default=REEL_BODY_FONT_STYLE)
+    parser.add_argument("--cover-font-style", choices=tuple(COVER_FONT_STYLES), default=REEL_COVER_FONT_STYLE)
+    parser.add_argument("--cover-duration", type=float, default=REEL_COVER_DURATION)
     parser.add_argument("--structured-reel", action="store_true", help="表紙、広告、ビジネスモデルを交互にしたReelsを生成します。")
     parser.add_argument("--ad-images", nargs="*", type=Path, help="最大5枚までの広告画像")
     parser.add_argument("--ad-text", action="append", default=[], help="広告ページに入れる文章。複数指定可。")
     parser.add_argument("--business-text", action="append", default=[], help="ビジネスモデルページに入れる文章。複数指定可。")
-    parser.add_argument("--cover-title", default="なぜこの広告は◯ヶ月回っているのか？")
+    parser.add_argument("--cover-title", default=REEL_COVER_TITLE_TEMPLATE.format(period="◯ヶ月"))
     parser.add_argument("--pages-dir", type=Path, default=Path("deliverables/reels/pages"))
     parser.add_argument("--max-ads", type=int, default=5)
+    parser.add_argument("--no-bgm", action="store_true", help="固定BGMを付けず、無音MP4を生成します。")
     return parser.parse_args()
 
 
@@ -708,7 +866,8 @@ def main() -> int:
             cover_duration=args.cover_duration,
             spec=spec,
         )
-        write_structured_mp4(pages, output_path, spec)
+        print(save_reel_thumbnail(pages, args.pages_dir.parent))
+        write_structured_mp4(pages, output_path, spec, with_bgm=not args.no_bgm)
         for page in pages:
             print(page.path)
         print(output_path)

@@ -36,6 +36,7 @@ python main.py --platform x -t "投稿文"
 対応:
 
 - テキスト即時投稿
+- 日次自動投稿では本文先頭に `【広告分析】` を付ける
 
 コマンド:
 
@@ -72,6 +73,18 @@ python main.py --platform instagram \
 
 - `carousel_poster.py`
 
+キャプション:
+
+- 日次自動投稿では `【広告分析】` に固定
+
+標準構成:
+
+- 表紙
+- `広告分析①` / `ビジネスモデル` の交互ページ
+- 最大 `広告分析④` まで
+- 最後にプロフィール誘導
+- 広告1件なら4枚、広告4件なら10枚
+
 コマンド:
 
 ```bash
@@ -90,6 +103,10 @@ python carousel_poster.py instagram \
 実装:
 
 - `reels_generator.py`
+
+キャプション:
+
+- 日次自動投稿では動画系として `勝ち広告を分析してみました` から始まる既存キャプションを使う
 
 コマンド:
 
@@ -141,6 +158,8 @@ python main.py --platform linkedin -t "投稿文"
 実装:
 
 - `carousel_poster.py`
+
+Instagramカルーセルと同じ画像構成をPDF化して投稿します。
 - LinkedIn Documents API
 - LinkedIn Posts API
 
@@ -171,7 +190,8 @@ python youtube_poster.py \
   --video deliverables/reels/structured_reel.mp4 \
   --title "広告クリエイティブ改善メモ #Shorts" \
   --description "概要欄テキスト" \
-  --tags 広告 マーケティング Shorts
+  --tags 広告 マーケティング Shorts \
+  --thumbnail deliverables/reels/thumbnail.png
 ```
 
 `main.py` から投稿する場合:
@@ -186,3 +206,5 @@ python main.py --platform youtube \
 結果:
 
 - `https://www.youtube.com/shorts/...`
+
+日次自動投稿では、Reels/Shorts生成時の `thumbnail.png` をYouTube Shortsのカスタムサムネとして自動設定します。Shorts処理後の反映漏れを避けるため、アップロード直後、45秒後、180秒後に同じサムネを再設定します。Instagram Reelsは動画先頭1.5秒の表紙をサムネ/プレビューとして使います。

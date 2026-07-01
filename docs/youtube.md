@@ -64,7 +64,8 @@ python youtube_poster.py \
   --title "広告クリエイティブ改善メモ #Shorts" \
   --description "概要欄テキスト" \
   --tags 広告 マーケティング Shorts \
-  --privacy-status public
+  --privacy-status public \
+  --thumbnail deliverables/reels/thumbnail.png
 ```
 
 生成物投稿フローの入口からも投稿できます。
@@ -88,6 +89,10 @@ python main.py --platform youtube \
 ```
 
 投稿に成功すると、`https://www.youtube.com/shorts/...` のURLを出力します。
+
+Reels/Shorts生成フローでは `thumbnail.png` を毎回出力します。日次自動投稿では、YouTube Shortsアップロード後にこの画像を自動でサムネ設定します。
+
+Shorts処理後に自動フレームへ戻ることがあるため、`youtube_poster.py` はアップロード直後、45秒後、180秒後に同じサムネを再設定します。
 
 ## Shortsとして投稿するための注意
 
