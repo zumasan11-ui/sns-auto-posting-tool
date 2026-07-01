@@ -66,8 +66,8 @@ python reels_generator.py \
 - `deliverables/reels/thumbnail.png`
 - `deliverables/reels/structured_reel_no_bgm.mp4`
 - `deliverables/reels/structured_reel.mp4`
-- `deliverables/facebook_manual/latest_facebook_personal_reel.mp4`
-- `deliverables/facebook_manual/latest_facebook_personal_caption.txt`
+- `deliverables/facebook_manual/<run_id>_facebook_personal_reel_XX.mp4`
+- `deliverables/facebook_manual/<run_id>_facebook_personal_caption_XX.txt`
 
 ## BGM合成
 
@@ -88,10 +88,7 @@ python reels_generator.py \
 - `public_state/public/manual_tests/`
 - `deliverables/facebook_manual/` の履歴ファイル
 
-Facebook個人手動投稿用の最新ファイルも、作成から7日より古くなれば削除します。
-
-- `deliverables/facebook_manual/latest_facebook_personal_reel.mp4`
-- `deliverables/facebook_manual/latest_facebook_personal_caption.txt`
+Facebook個人手動投稿用の動画とキャプションも、作成から7日より古くなれば削除します。
 
 保持日数は `GENERATED_ASSET_RETENTION_DAYS` で変更できます。
 
