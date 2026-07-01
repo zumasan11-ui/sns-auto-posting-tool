@@ -11,10 +11,6 @@ AUTO_POST_DIR = Path(os.getenv("AUTO_POST_RUNTIME_DIR", "deliverables/auto_post"
 FACEBOOK_MANUAL_DIR = Path(os.getenv("FACEBOOK_MANUAL_DIR", "deliverables/facebook_manual"))
 PUBLIC_RUNS_DIR = Path(os.getenv("PUBLIC_RUNS_DIR", "public_state/public/runs"))
 PUBLIC_MANUAL_TESTS_DIR = Path(os.getenv("PUBLIC_MANUAL_TESTS_DIR", "public_state/public/manual_tests"))
-LATEST_FACEBOOK_FILES = {
-    "latest_facebook_personal_reel.mp4",
-    "latest_facebook_personal_caption.txt",
-}
 
 
 def cutoff_timestamp(retention_days: int) -> float:
@@ -65,7 +61,7 @@ def cleanup_generated_assets(retention_days: int = DEFAULT_RETENTION_DAYS, *, dr
     cleanup_child_dirs(AUTO_POST_DIR, cutoff, dry_run=dry_run)
     cleanup_child_dirs(PUBLIC_RUNS_DIR, cutoff, dry_run=dry_run)
     cleanup_child_dirs(PUBLIC_MANUAL_TESTS_DIR, cutoff, dry_run=dry_run)
-    cleanup_files(FACEBOOK_MANUAL_DIR, cutoff, dry_run=dry_run, keep_names=LATEST_FACEBOOK_FILES)
+    cleanup_files(FACEBOOK_MANUAL_DIR, cutoff, dry_run=dry_run)
 
 
 def parse_args() -> argparse.Namespace:

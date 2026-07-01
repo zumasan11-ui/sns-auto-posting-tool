@@ -211,4 +211,4 @@ python main.py --platform youtube \
 
 Facebook個人アカウントはAPI自動投稿対象外です。Reels生成時に同じ動画を `deliverables/facebook_manual/latest_facebook_personal_reel.mp4` へ保存し、コピペ用キャプションを `deliverables/facebook_manual/latest_facebook_personal_caption.txt` へ保存します。履歴用にも `<run_id>_facebook_personal_reel_XX.mp4` と `<run_id>_facebook_personal_caption_XX.txt` を残します。
 
-履歴ファイルは7日より古くなると `cleanup_generated_assets.py` で自動削除します。最新の動画とキャプションだけは削除対象から外します。
+Facebook個人用の動画とキャプションは、`latest_*.mp4` / `latest_*.txt` も含めて7日より古くなると `cleanup_generated_assets.py` で自動削除します。

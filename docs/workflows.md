@@ -88,7 +88,7 @@ python reels_generator.py \
 - `public_state/public/manual_tests/`
 - `deliverables/facebook_manual/` の履歴ファイル
 
-Facebook個人手動投稿用の最新ファイルだけは残します。
+Facebook個人手動投稿用の最新ファイルも、作成から7日より古くなれば削除します。
 
 - `deliverables/facebook_manual/latest_facebook_personal_reel.mp4`
 - `deliverables/facebook_manual/latest_facebook_personal_caption.txt`
