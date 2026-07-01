@@ -17,7 +17,7 @@
 - X、Threads、Facebookページのテキスト投稿は、広告分析/ビジネスモデルのセクションを朝 `07:30`、昼 `12:00`、夕 `16:00`、夜 `19:30` の4枠へ均等配分する。同じセクションは3媒体へ同じタイミングで投稿し、媒体ごとにはずらさない。枠内ではセクションごとに1分ずつずらす
 - Instagramカルーセル投稿のキャプションとThreadsの日次投稿先頭は `【広告分析】` にする。Reels/Shortsなど動画系キャプションは `勝ち広告を分析してみました` のままにする
 - Instagram Reelsは `share_to_feed=false` で投稿し、Instagramフィードには共有しない。Instagramフィード面はカルーセル投稿だけにする
-- Facebook個人アカウントはAPI自動投稿対象外にする。代わりにReels生成時の動画を `deliverables/facebook_manual/latest_facebook_personal_reel.mp4` へ毎回保存し、Macローカル実行時は写真アプリの `SNS Auto Post` アルバムへ自動取り込みして、iPhoneから手動投稿しやすくする
+- Facebook個人アカウントはAPI自動投稿対象外にする。代わりにReels生成時の動画を `deliverables/facebook_manual/latest_facebook_personal_reel.mp4`、コピペ用キャプションを `deliverables/facebook_manual/latest_facebook_personal_caption.txt` へ毎回保存する
 
 ## 新機能追加時に更新するもの
 

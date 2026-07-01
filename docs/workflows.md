@@ -67,6 +67,7 @@ python reels_generator.py \
 - `deliverables/reels/structured_reel_no_bgm.mp4`
 - `deliverables/reels/structured_reel.mp4`
 - `deliverables/facebook_manual/latest_facebook_personal_reel.mp4`
+- `deliverables/facebook_manual/latest_facebook_personal_caption.txt`
 
 ## BGM合成
 

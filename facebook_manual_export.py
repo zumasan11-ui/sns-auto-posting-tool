@@ -8,6 +8,7 @@ from typing import Optional
 
 FACEBOOK_MANUAL_DIR = Path(os.getenv("FACEBOOK_MANUAL_DIR", "deliverables/facebook_manual"))
 FACEBOOK_MANUAL_LATEST_FILENAME = "latest_facebook_personal_reel.mp4"
+FACEBOOK_MANUAL_LATEST_CAPTION_FILENAME = "latest_facebook_personal_caption.txt"
 FACEBOOK_MANUAL_PHOTOS_ALBUM = os.getenv("FACEBOOK_MANUAL_PHOTOS_ALBUM", "SNS Auto Post")
 
 
@@ -19,8 +20,7 @@ def truthy_env(name: str, default: bool = False) -> bool:
 
 
 def photos_import_enabled() -> bool:
-    default = platform.system() == "Darwin" and not truthy_env("CI")
-    return truthy_env("IMPORT_FACEBOOK_MANUAL_TO_PHOTOS", default)
+    return truthy_env("IMPORT_FACEBOOK_MANUAL_TO_PHOTOS", False)
 
 
 def import_video_to_photos(video_path: Path, album_name: str = FACEBOOK_MANUAL_PHOTOS_ALBUM) -> None:
@@ -55,19 +55,30 @@ def export_facebook_manual_video(
     *,
     run_id: str,
     chunk_index: int,
+    caption: str,
     import_to_photos: Optional[bool] = None,
-) -> Path:
+) -> dict[str, Path]:
     if not video_path.exists():
         raise RuntimeError(f"Facebook個人投稿用の元動画が見つかりません: {video_path}")
 
     FACEBOOK_MANUAL_DIR.mkdir(parents=True, exist_ok=True)
     named_path = FACEBOOK_MANUAL_DIR / f"{run_id}_facebook_personal_reel_{chunk_index:02d}.mp4"
+    named_caption_path = FACEBOOK_MANUAL_DIR / f"{run_id}_facebook_personal_caption_{chunk_index:02d}.txt"
     latest_path = FACEBOOK_MANUAL_DIR / FACEBOOK_MANUAL_LATEST_FILENAME
+    latest_caption_path = FACEBOOK_MANUAL_DIR / FACEBOOK_MANUAL_LATEST_CAPTION_FILENAME
     shutil.copy2(video_path, named_path)
     shutil.copy2(video_path, latest_path)
+    caption_text = caption.strip() + "\n"
+    named_caption_path.write_text(caption_text, encoding="utf-8")
+    latest_caption_path.write_text(caption_text, encoding="utf-8")
 
     should_import = photos_import_enabled() if import_to_photos is None else import_to_photos
     if should_import:
         import_video_to_photos(latest_path)
 
-    return latest_path
+    return {
+        "video": latest_path,
+        "caption": latest_caption_path,
+        "named_video": named_path,
+        "named_caption": named_caption_path,
+    }

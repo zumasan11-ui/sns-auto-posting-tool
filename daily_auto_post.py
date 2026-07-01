@@ -715,15 +715,16 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
             slide_urls.append(slide_urls[0])
         pdf_public_url = copy_public(carousel["pdf"], asset_prefix / f"carousel_{chunk_index:02d}" / "linkedin_carousel.pdf")
         reel_path = render_reel_chunk(chunk, work_dir / f"reel_{chunk_index:02d}")
-        facebook_manual_video_path = export_facebook_manual_video(
+        video_caption = caption_for(chunk)
+        facebook_manual_paths = export_facebook_manual_video(
             reel_path,
             run_id=run_id,
             chunk_index=chunk_index,
+            caption=video_caption,
         )
         thumbnail_path = reel_path.parent / "thumbnail.png"
         reel_url = copy_public(reel_path, asset_prefix / f"reel_{chunk_index:02d}" / "reel.mp4")
         thumbnail_url = copy_public(thumbnail_path, asset_prefix / f"reel_{chunk_index:02d}" / "thumbnail.png")
-        video_caption = caption_for(chunk)
         tasks.extend(
             [
                 {
@@ -763,7 +764,8 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "description": video_caption,
                     "video_path": str(reel_path),
                     "video_url": reel_url,
-                    "facebook_manual_video_path": str(facebook_manual_video_path),
+                    "facebook_manual_video_path": str(facebook_manual_paths["video"]),
+                    "facebook_manual_caption_path": str(facebook_manual_paths["caption"]),
                     "thumbnail_path": str(thumbnail_path),
                     "thumbnail_url": thumbnail_url,
                     "status": "pending",

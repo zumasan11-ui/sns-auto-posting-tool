@@ -58,7 +58,7 @@ python reels_generator.py \
   --transition none
 ```
 
-Reels/Shorts生成時は、表紙画像を `thumbnail.png` として保存します。YouTube Shorts投稿ではこの画像を自動でサムネ設定し、Instagram Reelsでは動画先頭1.5秒の表紙をサムネ/プレビューとして使います。Instagram Reelsはフィードへ共有せず、Instagramフィード面はカルーセル投稿だけにします。個人Facebookへ手動投稿するため、同じ動画を `deliverables/facebook_manual/latest_facebook_personal_reel.mp4` にも保存します。Macローカル実行時は写真アプリの `SNS Auto Post` アルバムへ自動取り込みします。
+Reels/Shorts生成時は、表紙画像を `thumbnail.png` として保存します。YouTube Shorts投稿ではこの画像を自動でサムネ設定し、Instagram Reelsでは動画先頭1.5秒の表紙をサムネ/プレビューとして使います。Instagram Reelsはフィードへ共有せず、Instagramフィード面はカルーセル投稿だけにします。個人Facebookへ手動投稿するため、同じ動画とコピペ用キャプションを `deliverables/facebook_manual/` にも保存します。
 
 ### Instagramカルーセル投稿
 
@@ -124,15 +124,16 @@ python main.py --platform youtube --video deliverables/reels/structured_reel.mp4
 
 Facebook個人アカウントはAPIから安定した自動投稿ができないため、手動投稿用の動画だけを毎回保存します。
 
-- 最新ファイル: `deliverables/facebook_manual/latest_facebook_personal_reel.mp4`
-- 履歴ファイル: `deliverables/facebook_manual/<run_id>_facebook_personal_reel_XX.mp4`
-- Macローカル実行時: 写真アプリの `SNS Auto Post` アルバムへ自動保存
-- GitHub Actions実行時: Macの写真アプリへアクセスできないため、ファイル保存のみ
+- 最新動画: `deliverables/facebook_manual/latest_facebook_personal_reel.mp4`
+- 最新キャプション: `deliverables/facebook_manual/latest_facebook_personal_caption.txt`
+- 履歴動画: `deliverables/facebook_manual/<run_id>_facebook_personal_reel_XX.mp4`
+- 履歴キャプション: `deliverables/facebook_manual/<run_id>_facebook_personal_caption_XX.txt`
+- GitHub Actions実行時も専用フォルダへ保存します
 
-写真アプリへの自動保存を止める場合:
+写真アプリへも取り込みたい場合だけ、Macローカル実行時に次を設定します。
 
 ```env
-IMPORT_FACEBOOK_MANUAL_TO_PHOTOS=0
+IMPORT_FACEBOOK_MANUAL_TO_PHOTOS=1
 ```
 
 ### Notion API連携
