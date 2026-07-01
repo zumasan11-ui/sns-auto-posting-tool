@@ -15,12 +15,14 @@ FONT_PATHS = [
     "/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc",
     "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
 ]
-MINCHO_FONT_PATHS = [
-    "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc",
-    "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc",
+CAROUSEL_BODY_FONT_PATHS = [
+    "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
+    "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
     "assets/fonts/NotoSansJP-Regular.ttf",
 ]
 BOLD_FONT_PATHS = [
+    "/System/Library/Fonts/ヒラギノ角ゴシック W8.ttc",
+    "/System/Library/Fonts/ヒラギノ角ゴシック W8.ttc",
     "assets/fonts/NotoSansJP-Bold.ttf",
     "assets/fonts/NotoSansJP-Regular.ttf",
     "/System/Library/Fonts/AppleSDGothicNeo.ttc",
@@ -35,8 +37,8 @@ def load_font(size: int, index: int = 0, bold: bool = False) -> ImageFont.FreeTy
     return ImageFont.load_default()
 
 
-def load_mincho_font(size: int, index: int = 0) -> ImageFont.FreeTypeFont:
-    for path in MINCHO_FONT_PATHS:
+def load_carousel_body_font(size: int, index: int = 0) -> ImageFont.FreeTypeFont:
+    for path in CAROUSEL_BODY_FONT_PATHS:
         if Path(path).exists():
             return ImageFont.truetype(path, size=size, index=index)
     return load_font(size)
@@ -147,8 +149,8 @@ def render_slide(
     canvas = Image.new("RGB", CANVAS_SIZE, "#ffffff")
     draw = ImageDraw.Draw(canvas)
 
-    label_font = load_font(30, bold=True)
-    body_font = load_mincho_font(42)
+    label_font = load_font(42, bold=True)
+    body_font = load_carousel_body_font(42)
 
     accent = "#111111"
     black = "#111111"
@@ -158,24 +160,24 @@ def render_slide(
     label_bbox = draw.textbbox((0, 0), label, font=label_font)
     label_w = label_bbox[2] - label_bbox[0]
     label_h = label_bbox[3] - label_bbox[1]
-    badge = (MARGIN_X, 54, MARGIN_X + label_w + 58, 104)
+    badge = (MARGIN_X, 76, MARGIN_X + label_w + 70, 140)
     label_x = badge[0] + (badge[2] - badge[0] - label_w) / 2 - label_bbox[0]
     label_y = badge[1] + (badge[3] - badge[1] - label_h) / 2 - label_bbox[1] + 3
-    draw.rounded_rectangle(badge, radius=25, fill=accent)
+    draw.rounded_rectangle(badge, radius=32, fill=accent)
     draw.text((label_x, label_y), label, font=label_font, fill="#ffffff")
 
     body_lines = wrap_text(body, body_font, CANVAS_SIZE[0] - MARGIN_X * 2, 6)
-    draw_multiline(draw, body_lines, (MARGIN_X, 150), body_font, gray, 58)
+    draw_multiline(draw, body_lines, (MARGIN_X, 235), body_font, gray, 66)
 
-    draw.line((0, TOP_HEIGHT, CANVAS_SIZE[0], TOP_HEIGHT), fill="#e6e6e6", width=2)
+    draw.line((0, TOP_HEIGHT, CANVAS_SIZE[0], TOP_HEIGHT), fill="#e5e5e5", width=2)
 
-    ad_margin_x = 72
+    ad_margin_x = 155
     ad_margin_y = 40
     ad_box = (
         ad_margin_x,
         TOP_HEIGHT + ad_margin_y,
         CANVAS_SIZE[0] - ad_margin_x,
-        CANVAS_SIZE[1] - ad_margin_y,
+        1310,
     )
     ad_area = fit_contain(
         screenshot,
@@ -190,20 +192,20 @@ def render_slide(
 def render_text_slide(label: str, body: str) -> Image.Image:
     canvas = Image.new("RGB", CANVAS_SIZE, "#ffffff")
     draw = ImageDraw.Draw(canvas)
-    label_font = load_font(30, bold=True)
-    body_font = load_mincho_font(44)
+    label_font = load_font(42, bold=True)
+    body_font = load_carousel_body_font(42)
 
     label_bbox = draw.textbbox((0, 0), label, font=label_font)
     label_w = label_bbox[2] - label_bbox[0]
     label_h = label_bbox[3] - label_bbox[1]
-    badge = (MARGIN_X, 54, MARGIN_X + label_w + 58, 104)
+    badge = (MARGIN_X, 76, MARGIN_X + label_w + 70, 140)
     label_x = badge[0] + (badge[2] - badge[0] - label_w) / 2 - label_bbox[0]
     label_y = badge[1] + (badge[3] - badge[1] - label_h) / 2 - label_bbox[1] + 3
-    draw.rounded_rectangle(badge, radius=25, fill="#111111")
+    draw.rounded_rectangle(badge, radius=32, fill="#111111")
     draw.text((label_x, label_y), label, font=label_font, fill="#ffffff")
 
-    y = 170
-    for line in wrap_text(normalize_text(body), body_font, CANVAS_SIZE[0] - MARGIN_X * 2, 16):
+    y = 235
+    for line in wrap_text(normalize_text(body), body_font, CANVAS_SIZE[0] - MARGIN_X * 2, 14):
         draw.text((MARGIN_X, y), line, font=body_font, fill="#222222")
         y += 66
     return canvas

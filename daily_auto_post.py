@@ -535,7 +535,7 @@ def render_carousel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Di
             if image_path is None:
                 raise RuntimeError("カルーセル生成に使う画像がありません。")
             ad_label = CIRCLED_DIGITS[ad_index - 1] if ad_index <= len(CIRCLED_DIGITS) else str(ad_index)
-            slide = render_slide(index, len(sections), f"広告分析{ad_label}", strip_numbering(section.text), Image.open(image_path))
+            slide = render_slide(index, len(sections), f"広告{ad_label}", strip_numbering(section.text), Image.open(image_path))
         slide_path = output_dir / f"slide_{index:02d}.png"
         slide.save(slide_path)
         slides.append(slide)

@@ -192,7 +192,7 @@ def render_reel_analysis_slide(
 
     margin_x = 72
     ad_number = AD_NUMBER_LABELS[index - 1] if 1 <= index <= len(AD_NUMBER_LABELS) else str(index)
-    draw_centered_badge(draw, f"広告分析{ad_number}", (margin_x, 128, margin_x + 340, 192))
+    draw_centered_badge(draw, f"広告{ad_number}", (margin_x, 128, margin_x + 230, 192))
 
     text_top = 328
     text_lines = wrap_text(text, body_font, spec.width - margin_x * 2, 9)
