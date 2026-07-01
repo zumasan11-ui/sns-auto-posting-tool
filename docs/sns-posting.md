@@ -207,4 +207,4 @@ python main.py --platform youtube \
 
 - `https://www.youtube.com/shorts/...`
 
-日次自動投稿では、Reels/Shorts生成時の `thumbnail.png` をYouTube Shortsのカスタムサムネとして自動設定します。Shorts処理後の反映漏れを避けるため、アップロード直後、45秒後、180秒後に同じサムネを再設定します。Instagram Reelsは動画先頭1.5秒の表紙をサムネ/プレビューとして使います。
+日次自動投稿では、Reels/Shorts生成時の `thumbnail.png` をYouTube Shortsのカスタムサムネとして自動設定します。Shorts処理後の反映漏れを避けるため、アップロード直後、45秒後、180秒後に同じサムネを再設定します。Instagram Reelsは動画先頭1.5秒の表紙をサムネ/プレビューとして使い、`share_to_feed=false` でフィードへは共有しません。Instagramフィード面はカルーセル投稿だけにします。

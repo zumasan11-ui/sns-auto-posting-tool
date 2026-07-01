@@ -756,7 +756,7 @@ def wait_for_reels_container(creation_id: str, access_token: str) -> None:
     raise RuntimeError(f"Instagram Reelsコンテナが時間内に完了しませんでした: {creation_id}")
 
 
-def post_instagram_reel(video_url: str, caption: str) -> str:
+def post_instagram_reel(video_url: str, caption: str, share_to_feed: bool = False) -> str:
     if not video_url.startswith("https://"):
         raise RuntimeError("Instagram Reels投稿には公開HTTPSの --video-url が必要です。")
 
@@ -770,6 +770,7 @@ def post_instagram_reel(video_url: str, caption: str) -> str:
             "media_type": "REELS",
             "video_url": video_url,
             "caption": caption,
+            "share_to_feed": "true" if share_to_feed else "false",
             "access_token": access_token,
         },
     )

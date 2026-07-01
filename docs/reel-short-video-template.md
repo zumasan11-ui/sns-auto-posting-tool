@@ -110,6 +110,7 @@ Instagram ReelsとYouTube Shortsの動画は、この仕様を正とします。
 - YouTube Shorts: 投稿後にYouTube Data APIで `thumbnail.png` を自動設定する
 - YouTube Shorts: アップロード直後だけでなく、Shorts処理後の反映漏れを避けるため時間差で複数回 `thumbnail.png` を再設定する
 - Instagram Reels: 動画先頭1.5秒に同じ表紙を入れることでサムネ/プレビューに使われる前提にする
+- Instagram Reels: `share_to_feed=false` で投稿し、Instagramフィードには共有しない
 - Instagram側で別カバー指定は標準では行わない
 
 ## 標準コマンド

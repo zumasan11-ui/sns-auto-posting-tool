@@ -58,7 +58,7 @@ python reels_generator.py \
   --transition none
 ```
 
-Reels/Shorts生成時は、表紙画像を `thumbnail.png` として保存します。YouTube Shorts投稿ではこの画像を自動でサムネ設定し、Instagram Reelsでは動画先頭1.5秒の表紙をサムネ/プレビューとして使います。
+Reels/Shorts生成時は、表紙画像を `thumbnail.png` として保存します。YouTube Shorts投稿ではこの画像を自動でサムネ設定し、Instagram Reelsでは動画先頭1.5秒の表紙をサムネ/プレビューとして使います。Instagram Reelsはフィードへ共有せず、Instagramフィード面はカルーセル投稿だけにします。
 
 ### Instagramカルーセル投稿
 
@@ -78,6 +78,7 @@ python reels_generator.py --post \
 ```
 
 Instagram Graph APIではローカルMP4を直接投稿できません。Meta側から取得できる公開HTTPS URLが必要です。
+標準では `share_to_feed=false` で投稿し、ReelsをInstagramフィードへ共有しません。
 
 ### LinkedIn PDF投稿
 
