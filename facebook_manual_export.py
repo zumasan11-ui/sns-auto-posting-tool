@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Optional
 
 
-FACEBOOK_MANUAL_DIR = Path(os.getenv("FACEBOOK_MANUAL_DIR", "deliverables/facebook_manual"))
 FACEBOOK_MANUAL_PHOTOS_ALBUM = os.getenv("FACEBOOK_MANUAL_PHOTOS_ALBUM", "SNS Auto Post")
 
 
@@ -15,6 +14,18 @@ def truthy_env(name: str, default: bool = False) -> bool:
     if value is None:
         return default
     return value.strip().lower() not in ("", "0", "false", "no", "off")
+
+
+def default_facebook_manual_dir() -> Path:
+    configured = os.getenv("FACEBOOK_MANUAL_DIR", "").strip()
+    if configured:
+        return Path(configured).expanduser()
+    if platform.system() == "Darwin" and not truthy_env("CI"):
+        return Path.home() / "Desktop" / "Facebook個人投稿用"
+    return Path("deliverables/facebook_manual")
+
+
+FACEBOOK_MANUAL_DIR = default_facebook_manual_dir()
 
 
 def photos_import_enabled() -> bool:

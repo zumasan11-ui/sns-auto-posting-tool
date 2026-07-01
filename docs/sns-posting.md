@@ -209,6 +209,6 @@ python main.py --platform youtube \
 
 日次自動投稿では、Reels/Shorts生成時の `thumbnail.png` をYouTube Shortsのカスタムサムネとして自動設定します。Shorts処理後の反映漏れを避けるため、アップロード直後、45秒後、180秒後に同じサムネを再設定します。Instagram Reelsは動画先頭1.5秒の表紙をサムネ/プレビューとして使い、`share_to_feed=false` でフィードへは共有しません。Instagramフィード面はカルーセル投稿だけにします。
 
-Facebook個人アカウントはAPI自動投稿対象外です。Reels生成時に同じ動画を `deliverables/facebook_manual/<run_id>_facebook_personal_reel_XX.mp4` へ保存し、コピペ用キャプションを `deliverables/facebook_manual/<run_id>_facebook_personal_caption_XX.txt` へ保存します。`latest` ファイルは作りません。
+Facebook個人アカウントはAPI自動投稿対象外です。Reels生成時に同じ動画とコピペ用キャプションを保存します。Macローカル実行時はFinderで見つけやすい `~/Desktop/Facebook個人投稿用/`、GitHub Actions実行時は `deliverables/facebook_manual/` へ保存します。`latest` ファイルは作りません。
 
 Facebook個人用の動画とキャプションは、7日より古くなると `cleanup_generated_assets.py` で自動削除します。

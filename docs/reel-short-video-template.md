@@ -112,7 +112,7 @@ Instagram ReelsとYouTube Shortsの動画は、この仕様を正とします。
 - Instagram Reels: 動画先頭1.5秒に同じ表紙を入れることでサムネ/プレビューに使われる前提にする
 - Instagram Reels: `share_to_feed=false` で投稿し、Instagramフィードには共有しない
 - Instagram側で別カバー指定は標準では行わない
-- Facebook個人手動投稿用: 同じ動画とコピペ用キャプションを `deliverables/facebook_manual/<run_id>_facebook_personal_*_XX.*` に保存する。`latest` ファイルは作らない
+- Facebook個人手動投稿用: 同じ動画とコピペ用キャプションを、Macローカル実行時は `~/Desktop/Facebook個人投稿用/`、GitHub Actions実行時は `deliverables/facebook_manual/` に保存する。`latest` ファイルは作らない
 
 ## 標準コマンド
 

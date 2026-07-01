@@ -66,8 +66,10 @@ python reels_generator.py \
 - `deliverables/reels/thumbnail.png`
 - `deliverables/reels/structured_reel_no_bgm.mp4`
 - `deliverables/reels/structured_reel.mp4`
-- `deliverables/facebook_manual/<run_id>_facebook_personal_reel_XX.mp4`
-- `deliverables/facebook_manual/<run_id>_facebook_personal_caption_XX.txt`
+- Macローカル: `~/Desktop/Facebook個人投稿用/<run_id>_facebook_personal_reel_XX.mp4`
+- Macローカル: `~/Desktop/Facebook個人投稿用/<run_id>_facebook_personal_caption_XX.txt`
+- GitHub Actions: `deliverables/facebook_manual/<run_id>_facebook_personal_reel_XX.mp4`
+- GitHub Actions: `deliverables/facebook_manual/<run_id>_facebook_personal_caption_XX.txt`
 
 ## BGM合成
 

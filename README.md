@@ -123,10 +123,12 @@ python main.py --platform youtube --video deliverables/reels/structured_reel.mp4
 
 ### Facebook個人用の手動投稿動画
 
-Facebook個人アカウントはAPIから安定した自動投稿ができないため、手動投稿用の動画だけを毎回保存します。
+Facebook個人アカウントはAPIから安定した自動投稿ができないため、手動投稿用の動画だけを毎回保存します。Macローカル実行時はデスクトップの `Facebook個人投稿用` フォルダへ保存します。
 
-- 動画: `deliverables/facebook_manual/<run_id>_facebook_personal_reel_XX.mp4`
-- キャプション: `deliverables/facebook_manual/<run_id>_facebook_personal_caption_XX.txt`
+- Macローカル動画: `~/Desktop/Facebook個人投稿用/<run_id>_facebook_personal_reel_XX.mp4`
+- Macローカルキャプション: `~/Desktop/Facebook個人投稿用/<run_id>_facebook_personal_caption_XX.txt`
+- GitHub Actions動画: `deliverables/facebook_manual/<run_id>_facebook_personal_reel_XX.mp4`
+- GitHub Actionsキャプション: `deliverables/facebook_manual/<run_id>_facebook_personal_caption_XX.txt`
 - GitHub Actions実行時も専用フォルダへ保存します
 
 写真アプリへも取り込みたい場合だけ、Macローカル実行時に次を設定します。
@@ -142,9 +144,10 @@ IMPORT_FACEBOOK_MANUAL_TO_PHOTOS=1
 - `deliverables/auto_post/`: 自動投稿用のカルーセル画像、PDF、Reels動画
 - `public_state/public/runs/`: SNSが取得する公開アセット
 - `public_state/public/manual_tests/`: 手動テスト用の公開アセット
-- `deliverables/facebook_manual/`: Facebook個人手動投稿用の動画/キャプション
+- `deliverables/facebook_manual/`: GitHub Actions上のFacebook個人手動投稿用動画/キャプション
+- `~/Desktop/Facebook個人投稿用/`: Macローカル実行時のFacebook個人手動投稿用動画/キャプション
 
-Facebook個人用の動画とキャプションも、作成から7日より古くなれば削除します。保持日数を変える場合:
+Facebook個人用の動画とキャプションも、作成から7日より古くなれば削除します。保存先を変える場合は `FACEBOOK_MANUAL_DIR`、保持日数を変える場合は次を設定します。
 
 ```env
 GENERATED_ASSET_RETENTION_DAYS=7
