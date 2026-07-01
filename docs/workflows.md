@@ -79,6 +79,22 @@ python reels_generator.py \
 
 固定仕様は [reel-short-video-template.md](reel-short-video-template.md) を正とします。
 
+## 生成物の掃除
+
+日次自動投稿の計画作成前に `cleanup_generated_assets.py` を実行します。標準では7日より古い次の生成物を削除します。
+
+- `deliverables/auto_post/`
+- `public_state/public/runs/`
+- `public_state/public/manual_tests/`
+- `deliverables/facebook_manual/` の履歴ファイル
+
+Facebook個人手動投稿用の最新ファイルだけは残します。
+
+- `deliverables/facebook_manual/latest_facebook_personal_reel.mp4`
+- `deliverables/facebook_manual/latest_facebook_personal_caption.txt`
+
+保持日数は `GENERATED_ASSET_RETENTION_DAYS` で変更できます。
+
 ## Instagramカルーセル投稿フロー
 
 ```bash

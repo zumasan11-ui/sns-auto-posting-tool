@@ -26,6 +26,7 @@ from carousel_generator import (
     save_pdf,
 )
 from carousel_poster import post_instagram_carousel, post_linkedin_pdf
+from cleanup_generated_assets import cleanup_generated_assets
 from facebook_manual_export import export_facebook_manual_video
 from main import (
     build_client,
@@ -650,6 +651,7 @@ def copy_public(path: Path, relative_path: Path) -> str:
 
 
 def create_plan(run_now: bool = False) -> Dict[str, Any]:
+    cleanup_generated_assets()
     existing_state = load_state()
     if (
         existing_state

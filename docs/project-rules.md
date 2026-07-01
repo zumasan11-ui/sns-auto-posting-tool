@@ -18,6 +18,7 @@
 - Instagramカルーセル投稿のキャプションとThreadsの日次投稿先頭は `【広告分析】` にする。Reels/Shortsなど動画系キャプションは `勝ち広告を分析してみました` のままにする
 - Instagram Reelsは `share_to_feed=false` で投稿し、Instagramフィードには共有しない。Instagramフィード面はカルーセル投稿だけにする
 - Facebook個人アカウントはAPI自動投稿対象外にする。代わりにReels生成時の動画を `deliverables/facebook_manual/latest_facebook_personal_reel.mp4`、コピペ用キャプションを `deliverables/facebook_manual/latest_facebook_personal_caption.txt` へ毎回保存する
+- 自動投稿で増える `deliverables/auto_post/`、`public_state/public/runs/`、`public_state/public/manual_tests/`、`deliverables/facebook_manual/` の履歴ファイルは7日より古いものを自動削除する。Facebook個人用の `latest_*.mp4` / `latest_*.txt` は残す
 
 ## 新機能追加時に更新するもの
 

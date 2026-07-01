@@ -17,6 +17,7 @@
 - Threads/LinkedIn/YouTube OAuth補助
 - Threads/Meta/LinkedIn/YouTubeアクセストークン自動更新
 - Instagram Business Account ID取得補助
+- 自動投稿生成物の7日保持・自動削除
 
 ## セットアップ
 
@@ -134,6 +135,27 @@ Facebook個人アカウントはAPIから安定した自動投稿ができない
 
 ```env
 IMPORT_FACEBOOK_MANUAL_TO_PHOTOS=1
+```
+
+### 生成物の自動削除
+
+自動投稿で作る画像・動画・公開アセットは放置すると増えるため、日次処理の最初に7日より古い生成物を削除します。
+
+- `deliverables/auto_post/`: 自動投稿用のカルーセル画像、PDF、Reels動画
+- `public_state/public/runs/`: SNSが取得する公開アセット
+- `public_state/public/manual_tests/`: 手動テスト用の公開アセット
+- `deliverables/facebook_manual/`: Facebook個人手動投稿用の履歴動画/キャプション
+
+`deliverables/facebook_manual/latest_facebook_personal_reel.mp4` と `latest_facebook_personal_caption.txt` は常に残します。保持日数を変える場合:
+
+```env
+GENERATED_ASSET_RETENTION_DAYS=7
+```
+
+手動で確認する場合:
+
+```bash
+python cleanup_generated_assets.py --dry-run
 ```
 
 ### Notion API連携
