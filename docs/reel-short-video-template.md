@@ -88,16 +88,17 @@ Instagram ReelsとYouTube Shortsの動画は、この仕様を正とします。
 - 字幕アニメーション: なし
 - サムネ画像: `thumbnail.png` を毎回出力する
 
-## BGM固定ルール
+## BGMルール
 
-ユーザー確認済みの `deliverables/reels/structured_reel.mp4` から抽出した音声を正規BGM素材として使います。
+Instagram ReelsとYouTube ShortsのBGMは、固定1曲ではなく毎回ランダムに選びます。
 
-- 固定素材: `assets/audio/reel_bgm_reference.m4a`
-- 元動画: `deliverables/reels/structured_reel.mp4`
-- 動画尺に合わせてクロスフェードループ/トリムする
-- 動画尺がBGM素材より長い場合も、途中でBGMが切れて頭に戻ったように聞こえるハードループは使わない
+- 通常: Mixkitの無料BGM一覧 `https://mixkit.co/free-stock-music/` から候補を取得し、ランダムに1曲ダウンロードする
+- フォールバック: Mixkit取得に失敗した場合は `assets/audio/mixkit_fallback/` の保存済みBGMからランダムに選ぶ
+- 取得したMP3は生成先ディレクトリ配下の一時ファイルとして扱う
+- 曲名・作者・URLのメモファイルや専用ログは作らない
+- MP4合成前に動画尺へトリムし、音量を下げ、冒頭と末尾だけ軽くフェードする
 - MP4合成後の音声: AAC 192kbps
-- この音源を変更する場合は、ユーザー確認後に素材ファイルごと差し替える
+- BGM方式を変更する場合は、ユーザー確認後に実装とこのドキュメントを更新する
 
 無音で確認したい場合だけ `--no-bgm` を使います。通常運用では使いません。
 
@@ -141,7 +142,7 @@ python reels_generator.py \
 - `docs/templates.md`
 - `README.md` のコマンド例
 - 必要なら `.github/pull_request_template.md`
-- BGM変更時は `assets/audio/reel_bgm_reference.m4a` も更新する
+- BGM変更時はランダム取得ルール、フォールバック素材、音量、フェード設定を更新する
 
 出力確認:
 

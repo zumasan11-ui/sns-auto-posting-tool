@@ -130,7 +130,7 @@ macOS標準フォントも利用します。
 
 ## 動画BGM
 
-現在は `assets/audio/reel_bgm_reference.m4a` を固定BGM素材として使い、標準でMP4へ合成します。
+現在はMixkitの無料BGM一覧から毎回ランダムに1曲取得し、標準でMP4へ合成します。取得に失敗した場合は `assets/audio/mixkit_fallback/` の保存済みBGMからランダムに選びます。
 
 BGMとサムネの固定仕様は [reel-short-video-template.md](reel-short-video-template.md) を正とします。
 

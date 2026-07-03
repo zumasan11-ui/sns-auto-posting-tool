@@ -57,7 +57,7 @@ python reels_generator.py \
 3. ビジネスモデルページを生成
 4. ページ画像を無音MP4へ変換
 5. `thumbnail.png` を生成
-6. 固定BGM素材をループ/トリム
+6. MixkitからランダムBGMを取得。失敗時は保存済みBGMへフォールバック
 7. MP4へBGMを合成
 
 出力:
@@ -73,15 +73,16 @@ python reels_generator.py \
 
 ## BGM合成
 
-現在は固定BGM素材を標準で合成しています。
+現在はランダムBGMを標準で合成しています。
 
 素材:
 
-- `assets/audio/reel_bgm_reference.m4a`
+- 通常: `https://mixkit.co/free-stock-music/`
+- フォールバック: `assets/audio/mixkit_fallback/*.mp3`
 
 固定仕様は [reel-short-video-template.md](reel-short-video-template.md) を正とします。
 
-動画尺が固定BGM素材より長い場合は、BGMをクロスフェードループして動画尺まで伸ばします。途中でBGMが切れて頭に戻ったように聞こえるハードループは使いません。
+取得したBGMは動画尺に合わせてトリムし、音量を下げ、冒頭と末尾だけ軽くフェードします。曲名・作者・URLのメモファイルや専用ログは作りません。
 
 ## 生成物の掃除
 

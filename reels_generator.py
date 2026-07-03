@@ -1,16 +1,19 @@
 import argparse
 import json
 import math
+import random
 import re
 import shutil
 import subprocess
 import sys
 import time
 from dataclasses import dataclass
+from html import unescape
 from pathlib import Path
 from typing import Iterable, List, Optional, Sequence
 
 import numpy as np
+import requests
 from PIL import Image, ImageDraw
 
 from carousel_generator import render_slide, wrap_text, load_font
@@ -34,6 +37,9 @@ REEL_STRUCTURED_PAGE_DURATION = 3.0
 REEL_STRUCTURED_TRANSITION = "none"
 REEL_BGM_ENABLED = True
 REEL_BGM_PATH = Path("assets/audio/reel_bgm_reference.m4a")
+REEL_BGM_FALLBACK_DIR = Path("assets/audio/mixkit_fallback")
+REEL_BGM_REMOTE_URL = "https://mixkit.co/free-stock-music/"
+REEL_BGM_REMOTE_TIMEOUT = 12
 REEL_THUMBNAIL_FILENAME = "thumbnail.png"
 SOFT_BODY_FONT_PATHS = (
     "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc",
@@ -93,6 +99,13 @@ class ReelSpec:
 class ReelPage:
     path: Path
     duration: float
+
+
+@dataclass(frozen=True)
+class MixkitTrack:
+    title: str
+    author: str
+    url: str
 
 
 def sorted_slide_paths(input_dir: Path, pattern: str = DEFAULT_SLIDE_GLOB) -> List[Path]:
@@ -507,54 +520,126 @@ def media_duration(path: Path) -> float:
     return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
 
-def build_crossfaded_bgm(bgm_path: Path, output_path: Path, duration: float, fade_duration: float = 1.5) -> Path:
+def clean_html_text(value: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", value)
+    return re.sub(r"\s+", " ", unescape(text)).strip()
+
+
+def parse_mixkit_tracks(html: str) -> List[MixkitTrack]:
+    tracks: List[MixkitTrack] = []
+    for block in re.split(r'<div class="item-grid__item">', html):
+        url_match = re.search(
+            r'data-audio-player-preview-url-value="(https://assets\.mixkit\.co/music/\d+/\d+\.mp3)"',
+            block,
+        )
+        if not url_match:
+            continue
+        title_match = re.search(r'<h2 class="item-grid-card__title">\s*(.*?)\s*</h2>', block, re.S)
+        author_match = re.search(r'<p class="item-grid-music-preview__author">\s*by\s*(.*?)\s*</p>', block, re.S)
+        tracks.append(
+            MixkitTrack(
+                title=clean_html_text(title_match.group(1)) if title_match else "",
+                author=clean_html_text(author_match.group(1)) if author_match else "",
+                url=url_match.group(1),
+            )
+        )
+    return tracks
+
+
+def fetch_mixkit_tracks() -> List[MixkitTrack]:
+    response = requests.get(REEL_BGM_REMOTE_URL, timeout=REEL_BGM_REMOTE_TIMEOUT)
+    response.raise_for_status()
+    return parse_mixkit_tracks(response.text)
+
+
+def random_local_bgm() -> Optional[Path]:
+    candidates = sorted(REEL_BGM_FALLBACK_DIR.glob("*.mp3"))
+    if not candidates and REEL_BGM_PATH.exists():
+        candidates = [REEL_BGM_PATH]
+    if not candidates:
+        return None
+    return random.choice(candidates)
+
+
+def download_random_mixkit_bgm(output_dir: Path) -> Optional[Path]:
+    try:
+        tracks = fetch_mixkit_tracks()
+        if not tracks:
+            return None
+        track = random.choice(tracks)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "selected_mixkit_bgm.mp3"
+        with requests.get(track.url, timeout=REEL_BGM_REMOTE_TIMEOUT, stream=True) as response:
+            response.raise_for_status()
+            with output_path.open("wb") as file:
+                for chunk in response.iter_content(chunk_size=1024 * 256):
+                    if chunk:
+                        file.write(chunk)
+        return output_path
+    except requests.RequestException:
+        return None
+
+
+def select_bgm_source(output_dir: Path) -> Path:
+    remote_bgm = download_random_mixkit_bgm(output_dir / "bgm_cache")
+    if remote_bgm:
+        return remote_bgm
+    local_bgm = random_local_bgm()
+    if local_bgm:
+        return local_bgm
+    raise RuntimeError("BGM素材が見つかりません。Mixkit取得にもローカルフォールバックにも失敗しました。")
+
+
+def prepare_bgm(bgm_path: Path, output_path: Path, duration: float) -> Path:
+    if not bgm_path.exists():
+        raise RuntimeError(f"BGM素材が見つかりません: {bgm_path}")
     source_duration = media_duration(bgm_path)
     if source_duration <= 0:
         raise RuntimeError(f"BGM素材の長さが不正です: {bgm_path}")
-    if duration <= source_duration:
-        return bgm_path
 
-    fade = min(fade_duration, max(0.2, source_duration / 4))
-    step = max(0.5, source_duration - fade)
-    copies = max(2, math.ceil((duration + fade) / step))
     ffmpeg = get_ffmpeg_command()
-    command = [*ffmpeg, "-y"]
-    for _ in range(copies):
-        command.extend(["-i", str(bgm_path)])
-
-    filters: List[str] = []
-    mix_inputs: List[str] = []
-    for index in range(copies):
-        delay_ms = round(index * step * 1000)
-        pieces = [
-            f"atrim=0:{source_duration:.3f}",
-            "asetpts=PTS-STARTPTS",
-        ]
-        if index > 0:
-            pieces.append(f"afade=t=in:st=0:d={fade:.3f}")
-        if index < copies - 1:
-            pieces.append(f"afade=t=out:st={step:.3f}:d={fade:.3f}")
-        pieces.append(f"adelay={delay_ms}:all=1")
-        filters.append(f"[{index}:a]" + ",".join(pieces) + f"[a{index}]")
-        mix_inputs.append(f"[a{index}]")
-    filters.append("".join(mix_inputs) + f"amix=inputs={copies}:normalize=0,atrim=0:{duration:.3f},asetpts=PTS-STARTPTS[aout]")
-
-    command.extend(
-        [
-            "-filter_complex",
-            ";".join(filters),
-            "-map",
-            "[aout]",
+    if duration <= source_duration:
+        command = [
+            *ffmpeg,
+            "-y",
+            "-i",
+            str(bgm_path),
+            "-filter:a",
+            f"atrim=0:{duration:.3f},asetpts=PTS-STARTPTS,volume=0.34,afade=t=in:st=0:d=0.18,afade=t=out:st={max(0, duration - 0.75):.3f}:d=0.75",
             "-c:a",
             "aac",
             "-b:a",
             "192k",
             str(output_path),
         ]
-    )
+    else:
+        copies = max(2, math.ceil(duration / source_duration))
+        command = [*ffmpeg, "-y"]
+        for _ in range(copies):
+            command.extend(["-i", str(bgm_path)])
+        concat_inputs = "".join(f"[{index}:a]" for index in range(copies))
+        filter_complex = (
+            f"{concat_inputs}concat=n={copies}:v=0:a=1,"
+            f"atrim=0:{duration:.3f},asetpts=PTS-STARTPTS,"
+            f"volume=0.34,afade=t=in:st=0:d=0.18,afade=t=out:st={max(0, duration - 0.75):.3f}:d=0.75[aout]"
+        )
+        command.extend(
+            [
+                "-filter_complex",
+                filter_complex,
+                "-map",
+                "[aout]",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "192k",
+                str(output_path),
+            ]
+        )
+
     process = subprocess.run(command, capture_output=True, text=True)
     if process.returncode != 0:
-        raise RuntimeError(f"クロスフェードBGM生成に失敗しました: {process.stderr}")
+        raise RuntimeError(f"BGM準備に失敗しました: {process.stderr}")
     return output_path
 
 
@@ -563,9 +648,9 @@ def mux_bgm(video_path: Path, bgm_path: Path, output_path: Path, duration: Optio
         raise RuntimeError(f"BGM素材が見つかりません: {bgm_path}")
     if duration is None:
         duration = media_duration(video_path)
-    prepared_bgm = build_crossfaded_bgm(
+    prepared_bgm = prepare_bgm(
         bgm_path,
-        output_path.with_name(f"{output_path.stem}_bgm_looped.m4a"),
+        output_path.with_name(f"{output_path.stem}_bgm_prepared.m4a"),
         duration,
     )
     ffmpeg = get_ffmpeg_command()
@@ -713,7 +798,8 @@ def write_structured_mp4(
         raise RuntimeError(f"ffmpeg が失敗しました: {stderr}")
 
     if with_bgm:
-        mux_bgm(video_output_path, bgm_path, output_path, structured_video_duration(pages, spec))
+        selected_bgm_path = select_bgm_source(output_path.parent)
+        mux_bgm(video_output_path, selected_bgm_path, output_path, structured_video_duration(pages, spec))
 
 
 def build_test_carousel(
@@ -897,7 +983,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cover-title", default=REEL_COVER_TITLE_TEMPLATE.format(period="◯ヶ月"))
     parser.add_argument("--pages-dir", type=Path, default=Path("deliverables/reels/pages"))
     parser.add_argument("--max-ads", type=int, default=5)
-    parser.add_argument("--no-bgm", action="store_true", help="固定BGMを付けず、無音MP4を生成します。")
+    parser.add_argument("--no-bgm", action="store_true", help="BGMを付けず、無音MP4を生成します。")
     return parser.parse_args()
 
 
