@@ -1,5 +1,298 @@
 {
-  "status": "idle",
-  "message": "未投稿ページがありません。",
-  "created_at": "2026-07-03T08:45:36.119110+09:00"
+  "status": "planned",
+  "page_id": "39226376-69c6-8053-a804-db8a676bb876",
+  "page_url": "https://app.notion.com/p/3922637669c68053a804db8a676bb876",
+  "title": "広告分析",
+  "run_id": "20260703135020",
+  "created_at": "2026-07-03T13:50:36.587175+09:00",
+  "sections": [
+    {
+      "number": 1,
+      "text": "掲載期間４ヶ月\nあああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
+      "companies": [],
+      "period_text": "４ヶ月"
+    },
+    {
+      "number": 2,
+      "text": "いいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいい",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 3,
+      "text": "うううううううううううううううううううううううううううううううううううううううううううううううううううううううううううう",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 4,
+      "text": "えええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええ",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 5,
+      "text": "掲載期間1年３ヶ月\nおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおお",
+      "companies": [],
+      "period_text": "1年"
+    },
+    {
+      "number": 6,
+      "text": "ンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンn",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "x-1",
+      "kind": "text",
+      "platform": "x",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "あああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_01.png",
+      "image_path": "deliverables/auto_post/20260703135020/source/notion_image_01.png",
+      "status": "pending"
+    },
+    {
+      "id": "threads-1",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "【広告分析】\n\nあああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_01.png",
+      "image_path": "deliverables/auto_post/20260703135020/source/notion_image_01.png",
+      "status": "pending"
+    },
+    {
+      "id": "facebook-1",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "あああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_01.png",
+      "image_path": "deliverables/auto_post/20260703135020/source/notion_image_01.png",
+      "status": "pending"
+    },
+    {
+      "id": "x-2",
+      "kind": "text",
+      "platform": "x",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "いいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいい",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "threads-2",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "【広告分析】\n\nいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいい",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "facebook-2",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "いいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいい",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "x-3",
+      "kind": "text",
+      "platform": "x",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "うううううううううううううううううううううううううううううううううううううううううううううううううううううううううううう",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_02.png",
+      "image_path": "deliverables/auto_post/20260703135020/source/notion_image_02.png",
+      "status": "pending"
+    },
+    {
+      "id": "threads-3",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "【広告分析】\n\nうううううううううううううううううううううううううううううううううううううううううううううううううううううううううううう",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_02.png",
+      "image_path": "deliverables/auto_post/20260703135020/source/notion_image_02.png",
+      "status": "pending"
+    },
+    {
+      "id": "facebook-3",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "うううううううううううううううううううううううううううううううううううううううううううううううううううううううううううう",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_02.png",
+      "image_path": "deliverables/auto_post/20260703135020/source/notion_image_02.png",
+      "status": "pending"
+    },
+    {
+      "id": "x-4",
+      "kind": "text",
+      "platform": "x",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "えええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええ",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "threads-4",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "【広告分析】\n\nえええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええ",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "facebook-4",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "えええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええええ",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "x-5",
+      "kind": "text",
+      "platform": "x",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "おおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおお",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_03.png",
+      "image_path": "deliverables/auto_post/20260703135020/source/notion_image_03.png",
+      "status": "pending"
+    },
+    {
+      "id": "threads-5",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "【広告分析】\n\nおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおお",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_03.png",
+      "image_path": "deliverables/auto_post/20260703135020/source/notion_image_03.png",
+      "status": "pending"
+    },
+    {
+      "id": "facebook-5",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "おおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおお",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_03.png",
+      "image_path": "deliverables/auto_post/20260703135020/source/notion_image_03.png",
+      "status": "pending"
+    },
+    {
+      "id": "x-6",
+      "kind": "text",
+      "platform": "x",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "ンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンn",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "threads-6",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "【広告分析】\n\nンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンn",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "facebook-6",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "now",
+      "slot_offset_minutes": 0,
+      "text": "ンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンンn",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "instagram-carousel-1",
+      "kind": "carousel",
+      "platform": "instagram",
+      "slot": "now",
+      "caption": "【広告分析】",
+      "image_urls": [
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_01.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_02.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_03.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_04.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_05.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_06.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_07.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_08.png"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "linkedin-carousel-1",
+      "kind": "linkedin_pdf",
+      "platform": "linkedin",
+      "slot": "now",
+      "caption": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
+      "pdf_path": "deliverables/auto_post/20260703135020/carousel_01/linkedin_carousel.pdf",
+      "pdf_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/linkedin_carousel.pdf",
+      "status": "pending"
+    },
+    {
+      "id": "instagram-reel-1",
+      "kind": "reel",
+      "platform": "instagram",
+      "slot": "now",
+      "caption": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
+      "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/reel_01/reel.mp4",
+      "status": "pending"
+    },
+    {
+      "id": "youtube-short-1",
+      "kind": "youtube",
+      "platform": "youtube",
+      "slot": "now",
+      "title": "勝ち広告を分析してみました #Shorts",
+      "description": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
+      "video_path": "deliverables/auto_post/20260703135020/reel_01/reel.mp4",
+      "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/reel_01/reel.mp4",
+      "facebook_manual_video_path": "/Users/kazuma/Desktop/Facebook個人投稿用/20260703135020_facebook_personal_reel_01.mp4",
+      "facebook_manual_caption_path": "/Users/kazuma/Desktop/Facebook個人投稿用/20260703135020_facebook_personal_caption_01.txt",
+      "thumbnail_path": "deliverables/auto_post/20260703135020/reel_01/thumbnail.png",
+      "thumbnail_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/reel_01/thumbnail.png",
+      "status": "pending"
+    }
+  ]
 }
