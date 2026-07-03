@@ -40,6 +40,7 @@ REEL_BGM_PATH = Path("assets/audio/reel_bgm_reference.m4a")
 REEL_BGM_FALLBACK_DIR = Path("assets/audio/mixkit_fallback")
 REEL_BGM_REMOTE_URL = "https://mixkit.co/free-stock-music/"
 REEL_BGM_REMOTE_TIMEOUT = 12
+REEL_BGM_FILTER = "loudnorm=I=-22:TP=-2.0:LRA=11,volume=0.90"
 REEL_THUMBNAIL_FILENAME = "thumbnail.png"
 SOFT_BODY_FONT_PATHS = (
     "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc",
@@ -599,13 +600,18 @@ def prepare_bgm(bgm_path: Path, output_path: Path, duration: float) -> Path:
 
     ffmpeg = get_ffmpeg_command()
     if duration <= source_duration:
+        audio_filter = (
+            f"atrim=0:{duration:.3f},asetpts=PTS-STARTPTS,"
+            f"{REEL_BGM_FILTER},"
+            f"afade=t=in:st=0:d=0.18,afade=t=out:st={max(0, duration - 0.75):.3f}:d=0.75"
+        )
         command = [
             *ffmpeg,
             "-y",
             "-i",
             str(bgm_path),
             "-filter:a",
-            f"atrim=0:{duration:.3f},asetpts=PTS-STARTPTS,volume=0.34,afade=t=in:st=0:d=0.18,afade=t=out:st={max(0, duration - 0.75):.3f}:d=0.75",
+            audio_filter,
             "-c:a",
             "aac",
             "-b:a",
@@ -621,7 +627,8 @@ def prepare_bgm(bgm_path: Path, output_path: Path, duration: float) -> Path:
         filter_complex = (
             f"{concat_inputs}concat=n={copies}:v=0:a=1,"
             f"atrim=0:{duration:.3f},asetpts=PTS-STARTPTS,"
-            f"volume=0.34,afade=t=in:st=0:d=0.18,afade=t=out:st={max(0, duration - 0.75):.3f}:d=0.75[aout]"
+            f"{REEL_BGM_FILTER},"
+            f"afade=t=in:st=0:d=0.18,afade=t=out:st={max(0, duration - 0.75):.3f}:d=0.75[aout]"
         )
         command.extend(
             [

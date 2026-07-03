@@ -82,7 +82,7 @@ python reels_generator.py \
 
 固定仕様は [reel-short-video-template.md](reel-short-video-template.md) を正とします。
 
-取得したBGMは動画尺に合わせてトリムし、音量を下げ、冒頭と末尾だけ軽くフェードします。曲名・作者・URLのメモファイルや専用ログは作りません。
+取得したBGMは動画尺に合わせてトリムし、`loudnorm` で曲ごとの体感音量を揃えた上でBGM用に控えめの音量へ調整し、冒頭と末尾だけ軽くフェードします。曲名・作者・URLのメモファイルや専用ログは作りません。
 
 ## 生成物の掃除
 
