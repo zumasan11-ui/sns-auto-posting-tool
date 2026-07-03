@@ -85,6 +85,10 @@ def wrap_text(
     return clipped
 
 
+def wrap_text_all(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> List[str]:
+    return wrap_text(text, font, max_width, 10000)
+
+
 def fit_text_lines(
     text: str,
     max_width: int,
@@ -98,7 +102,7 @@ def fit_text_lines(
     loader = load_font if bold else load_carousel_body_font
     preferred_font = loader(preferred_size, bold=bold) if bold else loader(preferred_size)
     preferred_line_height = round(preferred_size * line_height_ratio)
-    full_preferred_lines = wrap_text(normalize_text(text), preferred_font, max_width, 10000)
+    full_preferred_lines = wrap_text_all(normalize_text(text), preferred_font, max_width)
     preferred_overflows = len(full_preferred_lines) * preferred_line_height > max_height or len(full_preferred_lines) > max_lines
     if not preferred_overflows and all(preferred_font.getlength(line) <= max_width for line in full_preferred_lines):
         return preferred_font, full_preferred_lines, preferred_line_height, False
@@ -106,15 +110,22 @@ def fit_text_lines(
     for size in range(preferred_size, min_size - 1, -2):
         font = loader(size, bold=bold) if bold else loader(size)
         line_height = round(size * line_height_ratio)
-        full_lines = wrap_text(normalize_text(text), font, max_width, 10000)
+        full_lines = wrap_text_all(normalize_text(text), font, max_width)
         lines = full_lines[:max_lines]
         total_height = len(lines) * line_height
         if len(full_lines) <= max_lines and total_height <= max_height and all(font.getlength(line) <= max_width for line in lines):
             return font, lines, line_height, True
 
-    font = loader(min_size, bold=bold) if bold else loader(min_size)
-    line_height = round(min_size * line_height_ratio)
-    return font, wrap_text(normalize_text(text), font, max_width, max(1, max_height // line_height)), line_height, True
+    for size in range(min_size - 1, 7, -1):
+        font = loader(size, bold=bold) if bold else loader(size)
+        line_height = max(10, round(size * line_height_ratio))
+        full_lines = wrap_text_all(normalize_text(text), font, max_width)
+        if len(full_lines) * line_height <= max_height and all(font.getlength(line) <= max_width for line in full_lines):
+            return font, full_lines, line_height, True
+
+    font = loader(8, bold=bold) if bold else loader(8)
+    line_height = max(10, round(8 * line_height_ratio))
+    return font, wrap_text_all(normalize_text(text), font, max_width), line_height, True
 
 
 def draw_centered_block(

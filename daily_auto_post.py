@@ -75,7 +75,7 @@ RUNTIME_DIR = Path("deliverables/auto_post")
 SLOTS = ("07:30", "12:00", "16:00", "19:30")
 TWO_SLOT_TIMES = ("07:30", "19:30")
 TEXT_PLATFORMS = ("x", "threads", "facebook")
-CAROUSEL_CAPTION = "【広告分析】"
+CAROUSEL_CAPTION = "広告分析"
 THREADS_MAX_TEXT_LENGTH = 500
 CIRCLED_DIGITS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
 PLATFORM_STATUS_PROPERTIES = ("X", "Threads", "Instagram", "Facebook", "LinkedIn", "YouTube")
@@ -501,12 +501,12 @@ def caption_for(sections: Sequence[AdSection], title: str = "勝ち広告を分�
                 companies.append(company)
     if not companies:
         companies.append("Notionページ内広告")
-    return title + "\n" + "\n".join(f"引用元：{company}" for company in companies)
+    return title + "\n\n" + "\n".join(f"引用元：{company}" for company in companies)
 
 
-def hyperlink_formula(url: str, label: str = "X投稿") -> str:
+def hyperlink_formula(url: str, label: Optional[str] = None) -> str:
     escaped_url = url.replace('"', '""')
-    escaped_label = label.replace('"', '""')
+    escaped_label = (label or url).replace('"', '""')
     return f'=HYPERLINK("{escaped_url}","{escaped_label}")'
 
 
@@ -751,7 +751,8 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "kind": "linkedin_pdf",
                     "platform": "linkedin",
                     "slot": slot,
-                    "caption": video_caption,
+                    "caption": carousel_caption,
+                    "title": CAROUSEL_CAPTION,
                     "pdf_path": str(carousel["pdf"]),
                     "pdf_url": pdf_public_url,
                     "status": "pending",
@@ -934,7 +935,7 @@ def execute_task(task: Dict[str, Any]) -> str:
             response.raise_for_status()
             pdf_path.parent.mkdir(parents=True, exist_ok=True)
             pdf_path.write_bytes(response.content)
-        return post_linkedin_pdf(pdf_path, task["caption"], "勝ち広告を分析してみました")
+        return post_linkedin_pdf(pdf_path, task["caption"], task.get("title", "広告分析"))
     if kind == "reel":
         return post_instagram_reel(task["video_url"], task["caption"])
     if kind == "youtube":
@@ -1005,9 +1006,9 @@ def append_sheet_row(state: Dict[str, Any]) -> None:
         number = int(section.get("number", 0))
         if number % 2 == 0:
             continue
-        analysis = str(section.get("text", ""))
+        analysis = strip_numbering(str(section.get("text", "")))
         business_section = sections_by_number.get(number + 1, {})
-        business = str(business_section.get("text", ""))
+        business = strip_numbering(str(business_section.get("text", "")))
         genre = infer_genre(business or analysis)
         x_url = x_urls_by_section.get(number, "")
         rows.append(

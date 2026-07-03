@@ -224,9 +224,16 @@ def fit_reel_text_lines(
         if len(lines) <= max_lines and len(lines) * line_height <= max_height:
             return font, lines, line_height, True
 
-    font = load_soft_body_font(min_size, font_style)
-    line_height = round(min_size * 1.48)
-    return font, wrap_text(text, font, max_width, max(1, max_height // line_height)), line_height, True
+    for size in range(min_size - 1, 9, -1):
+        font = load_soft_body_font(size, font_style)
+        line_height = max(12, round(size * 1.48))
+        lines = wrap_text(text, font, max_width, 10000)
+        if len(lines) * line_height <= max_height:
+            return font, lines, line_height, True
+
+    font = load_soft_body_font(10, font_style)
+    line_height = max(12, round(10 * 1.48))
+    return font, wrap_text(text, font, max_width, 10000), line_height, True
 
 
 def draw_reel_text_block(
