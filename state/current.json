@@ -81,7 +81,10 @@
       "text": "あああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
       "image_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/source/notion_image_01.png",
       "image_path": "deliverables/auto_post/20260703135020/source/notion_image_01.png",
-      "status": "pending"
+      "status": "posted",
+      "post_url": "https://www.facebook.com/1017862924754816_122111854935312529",
+      "posted_at": "2026-07-03T13:54:57.221027+09:00",
+      "error": ""
     },
     {
       "id": "x-2",
