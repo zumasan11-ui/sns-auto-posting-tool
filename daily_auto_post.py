@@ -533,7 +533,7 @@ def infer_genre(business_text: str) -> str:
 
 def strip_numbering(text: str) -> str:
     text = re.sub(rf"^\s*([{CIRCLED_DIGITS}]|[0-9０-９]+[.)．、])\s*", "", text.strip())
-    text = re.sub(r"掲載期間[:：]?[^\n]*\n?", "", text)
+    text = re.sub(r"掲載期間\s*[:：]?\s*[^\n]*(?:\n|$)", "", text)
     return text.strip()
 
 
