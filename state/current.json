@@ -221,7 +221,10 @@
       "text": "おおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおお",
       "image_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/source/notion_image_03.png",
       "image_path": "deliverables/auto_post/20260703135020/source/notion_image_03.png",
-      "status": "pending"
+      "status": "posted",
+      "post_url": "https://x.com/i/web/status/2072907198745936362",
+      "posted_at": "2026-07-03T13:56:03.911858+09:00",
+      "error": ""
     },
     {
       "id": "threads-5",
