@@ -51,9 +51,12 @@
       "slot": "now",
       "slot_offset_minutes": 0,
       "text": "あああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
-      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_01.png",
+      "image_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/source/notion_image_01.png",
       "image_path": "deliverables/auto_post/20260703135020/source/notion_image_01.png",
-      "status": "pending"
+      "status": "posted",
+      "post_url": "https://x.com/i/web/status/2072906832558088444",
+      "posted_at": "2026-07-03T13:54:36.607860+09:00",
+      "error": ""
     },
     {
       "id": "threads-1",
@@ -62,7 +65,7 @@
       "slot": "now",
       "slot_offset_minutes": 0,
       "text": "【広告分析】\n\nあああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
-      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_01.png",
+      "image_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/source/notion_image_01.png",
       "image_path": "deliverables/auto_post/20260703135020/source/notion_image_01.png",
       "status": "pending"
     },
@@ -73,7 +76,7 @@
       "slot": "now",
       "slot_offset_minutes": 0,
       "text": "あああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
-      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_01.png",
+      "image_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/source/notion_image_01.png",
       "image_path": "deliverables/auto_post/20260703135020/source/notion_image_01.png",
       "status": "pending"
     },
@@ -117,7 +120,7 @@
       "slot": "now",
       "slot_offset_minutes": 0,
       "text": "うううううううううううううううううううううううううううううううううううううううううううううううううううううううううううう",
-      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_02.png",
+      "image_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/source/notion_image_02.png",
       "image_path": "deliverables/auto_post/20260703135020/source/notion_image_02.png",
       "status": "pending"
     },
@@ -128,7 +131,7 @@
       "slot": "now",
       "slot_offset_minutes": 0,
       "text": "【広告分析】\n\nうううううううううううううううううううううううううううううううううううううううううううううううううううううううううううう",
-      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_02.png",
+      "image_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/source/notion_image_02.png",
       "image_path": "deliverables/auto_post/20260703135020/source/notion_image_02.png",
       "status": "pending"
     },
@@ -139,7 +142,7 @@
       "slot": "now",
       "slot_offset_minutes": 0,
       "text": "うううううううううううううううううううううううううううううううううううううううううううううううううううううううううううう",
-      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_02.png",
+      "image_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/source/notion_image_02.png",
       "image_path": "deliverables/auto_post/20260703135020/source/notion_image_02.png",
       "status": "pending"
     },
@@ -183,7 +186,7 @@
       "slot": "now",
       "slot_offset_minutes": 0,
       "text": "おおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおお",
-      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_03.png",
+      "image_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/source/notion_image_03.png",
       "image_path": "deliverables/auto_post/20260703135020/source/notion_image_03.png",
       "status": "pending"
     },
@@ -194,7 +197,7 @@
       "slot": "now",
       "slot_offset_minutes": 0,
       "text": "【広告分析】\n\nおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおお",
-      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_03.png",
+      "image_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/source/notion_image_03.png",
       "image_path": "deliverables/auto_post/20260703135020/source/notion_image_03.png",
       "status": "pending"
     },
@@ -205,7 +208,7 @@
       "slot": "now",
       "slot_offset_minutes": 0,
       "text": "おおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおおお",
-      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/source/notion_image_03.png",
+      "image_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/source/notion_image_03.png",
       "image_path": "deliverables/auto_post/20260703135020/source/notion_image_03.png",
       "status": "pending"
     },
@@ -249,14 +252,14 @@
       "slot": "now",
       "caption": "【広告分析】",
       "image_urls": [
-        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_01.png",
-        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_02.png",
-        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_03.png",
-        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_04.png",
-        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_05.png",
-        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_06.png",
-        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_07.png",
-        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/slide_08.png"
+        "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/carousel_01/slide_01.png",
+        "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/carousel_01/slide_02.png",
+        "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/carousel_01/slide_03.png",
+        "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/carousel_01/slide_04.png",
+        "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/carousel_01/slide_05.png",
+        "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/carousel_01/slide_06.png",
+        "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/carousel_01/slide_07.png",
+        "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/carousel_01/slide_08.png"
       ],
       "status": "pending"
     },
@@ -267,7 +270,7 @@
       "slot": "now",
       "caption": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
       "pdf_path": "deliverables/auto_post/20260703135020/carousel_01/linkedin_carousel.pdf",
-      "pdf_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/carousel_01/linkedin_carousel.pdf",
+      "pdf_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/carousel_01/linkedin_carousel.pdf",
       "status": "pending"
     },
     {
@@ -276,7 +279,7 @@
       "platform": "instagram",
       "slot": "now",
       "caption": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
-      "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/reel_01/reel.mp4",
+      "video_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/reel_01/reel.mp4",
       "status": "pending"
     },
     {
@@ -287,11 +290,11 @@
       "title": "勝ち広告を分析してみました #Shorts",
       "description": "勝ち広告を分析してみました\n引用元：Notionページ内広告",
       "video_path": "deliverables/auto_post/20260703135020/reel_01/reel.mp4",
-      "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/reel_01/reel.mp4",
+      "video_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/reel_01/reel.mp4",
       "facebook_manual_video_path": "/Users/kazuma/Desktop/Facebook個人投稿用/20260703135020_facebook_personal_reel_01.mp4",
       "facebook_manual_caption_path": "/Users/kazuma/Desktop/Facebook個人投稿用/20260703135020_facebook_personal_caption_01.txt",
       "thumbnail_path": "deliverables/auto_post/20260703135020/reel_01/thumbnail.png",
-      "thumbnail_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/20260703135020/reel_01/thumbnail.png",
+      "thumbnail_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/reel_01/thumbnail.png",
       "status": "pending"
     }
   ]
