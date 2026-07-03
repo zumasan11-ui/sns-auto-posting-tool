@@ -355,7 +355,10 @@
       "facebook_manual_caption_path": "/Users/kazuma/Desktop/Facebook個人投稿用/20260703135020_facebook_personal_caption_01.txt",
       "thumbnail_path": "deliverables/auto_post/20260703135020/reel_01/thumbnail.png",
       "thumbnail_url": "https://raw.githubusercontent.com/zumasan11-ui/sns-auto-posting-tool/gh-pages/public/runs/20260703135020/reel_01/thumbnail.png",
-      "status": "pending"
+      "status": "posted",
+      "post_url": "https://www.youtube.com/shorts/iGpWppsxkAw",
+      "posted_at": "2026-07-03T14:03:05.594923+09:00",
+      "error": ""
     }
   ]
 }
