@@ -81,6 +81,8 @@ python reels_generator.py \
 
 固定仕様は [reel-short-video-template.md](reel-short-video-template.md) を正とします。
 
+動画尺が固定BGM素材より長い場合は、BGMをクロスフェードループして動画尺まで伸ばします。途中でBGMが切れて頭に戻ったように聞こえるハードループは使いません。
+
 ## 生成物の掃除
 
 日次自動投稿の計画作成前に `cleanup_generated_assets.py` を実行します。標準では7日より古い次の生成物を削除します。

@@ -1,5 +1,6 @@
 import argparse
 import json
+import math
 import re
 import shutil
 import subprocess
@@ -495,19 +496,86 @@ def structured_video_duration(pages: Sequence[ReelPage], spec: ReelSpec) -> floa
     return sum(page.duration for page in pages) + spec.ending_duration
 
 
-def mux_bgm(video_path: Path, bgm_path: Path, output_path: Path) -> None:
+def media_duration(path: Path) -> float:
+    ffmpeg = get_ffmpeg_command()
+    process = subprocess.run([*ffmpeg, "-hide_banner", "-i", str(path)], capture_output=True, text=True)
+    text = process.stderr + process.stdout
+    match = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", text)
+    if not match:
+        raise RuntimeError(f"メディアの長さを取得できません: {path}")
+    hours, minutes, seconds = match.groups()
+    return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+
+
+def build_crossfaded_bgm(bgm_path: Path, output_path: Path, duration: float, fade_duration: float = 1.5) -> Path:
+    source_duration = media_duration(bgm_path)
+    if source_duration <= 0:
+        raise RuntimeError(f"BGM素材の長さが不正です: {bgm_path}")
+    if duration <= source_duration:
+        return bgm_path
+
+    fade = min(fade_duration, max(0.2, source_duration / 4))
+    step = max(0.5, source_duration - fade)
+    copies = max(2, math.ceil((duration + fade) / step))
+    ffmpeg = get_ffmpeg_command()
+    command = [*ffmpeg, "-y"]
+    for _ in range(copies):
+        command.extend(["-i", str(bgm_path)])
+
+    filters: List[str] = []
+    mix_inputs: List[str] = []
+    for index in range(copies):
+        delay_ms = round(index * step * 1000)
+        pieces = [
+            f"atrim=0:{source_duration:.3f}",
+            "asetpts=PTS-STARTPTS",
+        ]
+        if index > 0:
+            pieces.append(f"afade=t=in:st=0:d={fade:.3f}")
+        if index < copies - 1:
+            pieces.append(f"afade=t=out:st={step:.3f}:d={fade:.3f}")
+        pieces.append(f"adelay={delay_ms}:all=1")
+        filters.append(f"[{index}:a]" + ",".join(pieces) + f"[a{index}]")
+        mix_inputs.append(f"[a{index}]")
+    filters.append("".join(mix_inputs) + f"amix=inputs={copies}:normalize=0,atrim=0:{duration:.3f},asetpts=PTS-STARTPTS[aout]")
+
+    command.extend(
+        [
+            "-filter_complex",
+            ";".join(filters),
+            "-map",
+            "[aout]",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            str(output_path),
+        ]
+    )
+    process = subprocess.run(command, capture_output=True, text=True)
+    if process.returncode != 0:
+        raise RuntimeError(f"クロスフェードBGM生成に失敗しました: {process.stderr}")
+    return output_path
+
+
+def mux_bgm(video_path: Path, bgm_path: Path, output_path: Path, duration: Optional[float] = None) -> None:
     if not bgm_path.exists():
         raise RuntimeError(f"BGM素材が見つかりません: {bgm_path}")
+    if duration is None:
+        duration = media_duration(video_path)
+    prepared_bgm = build_crossfaded_bgm(
+        bgm_path,
+        output_path.with_name(f"{output_path.stem}_bgm_looped.m4a"),
+        duration,
+    )
     ffmpeg = get_ffmpeg_command()
     command = [
         *ffmpeg,
         "-y",
         "-i",
         str(video_path),
-        "-stream_loop",
-        "-1",
         "-i",
-        str(bgm_path),
+        str(prepared_bgm),
         "-map",
         "0:v:0",
         "-map",
@@ -645,7 +713,7 @@ def write_structured_mp4(
         raise RuntimeError(f"ffmpeg が失敗しました: {stderr}")
 
     if with_bgm:
-        mux_bgm(video_output_path, bgm_path, output_path)
+        mux_bgm(video_output_path, bgm_path, output_path, structured_video_duration(pages, spec))
 
 
 def build_test_carousel(

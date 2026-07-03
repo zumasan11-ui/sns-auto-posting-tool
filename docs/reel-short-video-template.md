@@ -94,7 +94,8 @@ Instagram ReelsとYouTube Shortsの動画は、この仕様を正とします。
 
 - 固定素材: `assets/audio/reel_bgm_reference.m4a`
 - 元動画: `deliverables/reels/structured_reel.mp4`
-- 動画尺に合わせてループ/トリムする
+- 動画尺に合わせてクロスフェードループ/トリムする
+- 動画尺がBGM素材より長い場合も、途中でBGMが切れて頭に戻ったように聞こえるハードループは使わない
 - MP4合成後の音声: AAC 192kbps
 - この音源を変更する場合は、ユーザー確認後に素材ファイルごと差し替える
 

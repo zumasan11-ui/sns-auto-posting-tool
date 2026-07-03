@@ -76,6 +76,7 @@ python main.py --platform instagram \
 キャプション:
 
 - 日次自動投稿では `【広告分析】` に固定
+- 引用元が抽出できる場合は `引用元：...` も追加する
 
 標準構成:
 
@@ -212,3 +213,7 @@ python main.py --platform youtube \
 Facebook個人アカウントはAPI自動投稿対象外です。Reels生成時に同じ動画とコピペ用キャプションを保存します。Macローカル実行時はFinderで見つけやすい `~/Desktop/Facebook個人投稿用/`、GitHub Actions実行時は `deliverables/facebook_manual/` へ保存します。`latest` ファイルは作りません。
 
 Facebook個人用の動画とキャプションは、7日より古くなると `cleanup_generated_assets.py` で自動削除します。
+
+## Threads長文
+
+Threadsは本文が500文字を超える場合、本文を500文字以内に分割して返信ツリーとして投稿します。画像がある場合は最初の投稿だけに付け、続きはテキスト返信として連ねます。

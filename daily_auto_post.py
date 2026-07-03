@@ -76,6 +76,7 @@ SLOTS = ("07:30", "12:00", "16:00", "19:30")
 TWO_SLOT_TIMES = ("07:30", "19:30")
 TEXT_PLATFORMS = ("x", "threads", "facebook")
 CAROUSEL_CAPTION = "【広告分析】"
+THREADS_MAX_TEXT_LENGTH = 500
 CIRCLED_DIGITS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
 PLATFORM_STATUS_PROPERTIES = ("X", "Threads", "Instagram", "Facebook", "LinkedIn", "YouTube")
 
@@ -503,6 +504,12 @@ def caption_for(sections: Sequence[AdSection], title: str = "勝ち広告を分�
     return title + "\n" + "\n".join(f"引用元：{company}" for company in companies)
 
 
+def hyperlink_formula(url: str, label: str = "X投稿") -> str:
+    escaped_url = url.replace('"', '""')
+    escaped_label = label.replace('"', '""')
+    return f'=HYPERLINK("{escaped_url}","{escaped_label}")'
+
+
 def text_for_platform(platform: str, text: str) -> str:
     if platform == "threads":
         return f"{CAROUSEL_CAPTION}\n\n{text}".strip()
@@ -718,6 +725,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
         pdf_public_url = copy_public(carousel["pdf"], asset_prefix / f"carousel_{chunk_index:02d}" / "linkedin_carousel.pdf")
         reel_path = render_reel_chunk(chunk, work_dir / f"reel_{chunk_index:02d}")
         video_caption = caption_for(chunk)
+        carousel_caption = caption_for(chunk, CAROUSEL_CAPTION)
         facebook_manual_paths = export_facebook_manual_video(
             reel_path,
             run_id=run_id,
@@ -734,7 +742,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "kind": "carousel",
                     "platform": "instagram",
                     "slot": slot,
-                    "caption": CAROUSEL_CAPTION,
+                    "caption": carousel_caption,
                     "image_urls": slide_urls,
                     "status": "pending",
                 },
@@ -797,15 +805,42 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
     return state
 
 
-def create_threads_image_post(text: str, image_url: Optional[str]) -> str:
-    credentials = load_threads_credentials()
-    user_id = credentials["THREADS_USER_ID"]
-    access_token = credentials["THREADS_ACCESS_TOKEN"]
+def split_threads_text(text: str, limit: int = THREADS_MAX_TEXT_LENGTH) -> List[str]:
+    normalized = text.strip()
+    if len(normalized) <= limit:
+        return [normalized]
+    chunks: List[str] = []
+    remaining = normalized
+    while remaining:
+        if len(remaining) <= limit:
+            chunks.append(remaining)
+            break
+        cut = remaining.rfind("\n", 0, limit + 1)
+        if cut < max(1, limit // 2):
+            cut = remaining.rfind("。", 0, limit + 1)
+        if cut < max(1, limit // 2):
+            cut = limit
+        chunk = remaining[:cut].strip()
+        if chunk:
+            chunks.append(chunk)
+        remaining = remaining[cut:].strip()
+    return chunks
+
+
+def create_threads_container(
+    user_id: str,
+    access_token: str,
+    text: str,
+    image_url: Optional[str] = None,
+    reply_to_id: Optional[str] = None,
+) -> str:
     payload = {"text": text, "access_token": access_token}
     if image_url:
         payload.update({"media_type": "IMAGE", "image_url": image_url})
     else:
         payload["media_type"] = "TEXT"
+    if reply_to_id:
+        payload["reply_to_id"] = reply_to_id
     container = request_threads_api("POST", f"/{user_id}/threads", payload)
     creation_id = container.get("id")
     if not creation_id:
@@ -818,7 +853,28 @@ def create_threads_image_post(text: str, image_url: Optional[str]) -> str:
     post_id = published.get("id")
     if not post_id:
         raise RuntimeError(f"Threads投稿IDを取得できませんでした: {published}")
-    return f"Threads投稿ID: {post_id}"
+    return post_id
+
+
+def create_threads_image_post(text: str, image_url: Optional[str]) -> str:
+    credentials = load_threads_credentials()
+    user_id = credentials["THREADS_USER_ID"]
+    access_token = credentials["THREADS_ACCESS_TOKEN"]
+    chunks = split_threads_text(text)
+    root_id = ""
+    previous_id: Optional[str] = None
+    for index, chunk in enumerate(chunks):
+        post_id = create_threads_container(
+            user_id,
+            access_token,
+            chunk,
+            image_url if index == 0 else None,
+            previous_id,
+        )
+        if not root_id:
+            root_id = post_id
+        previous_id = post_id
+    return f"Threads投稿ID: {root_id}" + (f"（返信{len(chunks) - 1}件）" if len(chunks) > 1 else "")
 
 
 def create_x_post(text: str, image_url: Optional[str], image_path: Optional[str] = None) -> str:
@@ -937,22 +993,41 @@ def wait_for_slot_offset(task: Dict[str, Any], started_at: float, run_now: bool)
 
 def append_sheet_row(state: Dict[str, Any]) -> None:
     sections = state.get("sections", [])
-    analysis = "\n\n".join(section.get("text", "") for section in sections)
-    business = analysis
     service_name = state.get("title", "広告分析")
-    x_urls = [
-        task.get("post_url", "")
+    x_urls_by_section = {
+        int(str(task.get("id", "")).split("-", 1)[1]): task.get("post_url", "")
         for task in state.get("tasks", [])
-        if task.get("platform") == "x" and task.get("post_url")
-    ]
-    genre = infer_genre(business)
+        if task.get("platform") == "x" and task.get("post_url") and str(task.get("id", "")).startswith("x-")
+    }
+    sections_by_number = {int(section.get("number", 0)): section for section in sections}
+    rows: List[List[str]] = []
+    for section in sections:
+        number = int(section.get("number", 0))
+        if number % 2 == 0:
+            continue
+        analysis = str(section.get("text", ""))
+        business_section = sections_by_number.get(number + 1, {})
+        business = str(business_section.get("text", ""))
+        genre = infer_genre(business or analysis)
+        x_url = x_urls_by_section.get(number, "")
+        rows.append(
+            [
+                genre,
+                service_name,
+                analysis,
+                business,
+                hyperlink_formula(x_url) if x_url else "",
+            ]
+        )
+    if not rows:
+        return
     config = load_sheets_config()
     service = build_sheets_service(config)
     append_values(
         service,
         config["spreadsheet_id"],
         config["default_sheet"],
-        [[genre, service_name, "\n".join(x_urls), analysis, business]],
+        rows,
     )
 
 
