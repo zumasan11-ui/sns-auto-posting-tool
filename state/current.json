@@ -95,7 +95,10 @@
       "text": "いいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいい",
       "image_url": null,
       "image_path": null,
-      "status": "pending"
+      "status": "posted",
+      "post_url": "https://x.com/i/web/status/2072906931044557002",
+      "posted_at": "2026-07-03T13:54:59.979642+09:00",
+      "error": ""
     },
     {
       "id": "threads-2",
