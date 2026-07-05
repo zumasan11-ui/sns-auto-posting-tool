@@ -1,5 +1,746 @@
 {
-  "status": "idle",
-  "message": "未投稿ページがありません。",
-  "created_at": "2026-07-06T00:03:23.617553+09:00"
+  "status": "planned",
+  "page_id": "39426376-69c6-8185-bd75-dbff87022326",
+  "page_url": "https://app.notion.com/p/2026-07-06-3942637669c68185bd75dbff87022326",
+  "title": "2026-07-06 広告分析",
+  "run_id": "28759006006",
+  "created_at": "2026-07-06T08:46:44.867351+09:00",
+  "sections": [
+    {
+      "number": 1,
+      "text": "広告分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 2,
+      "text": "ビジネスモデル分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 3,
+      "text": "広告分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 4,
+      "text": "ビジネスモデル分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 5,
+      "text": "広告分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 6,
+      "text": "ビジネスモデル分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 7,
+      "text": "広告分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 8,
+      "text": "ビジネスモデル分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 9,
+      "text": "広告分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 10,
+      "text": "ビジネスモデル分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 11,
+      "text": "広告分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 12,
+      "text": "ビジネスモデル分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 13,
+      "text": "広告分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 14,
+      "text": "ビジネスモデル分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 15,
+      "text": "広告分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    },
+    {
+      "number": 16,
+      "text": "ビジネスモデル分析",
+      "companies": [],
+      "period_text": "◯ヶ月"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "x-1",
+      "kind": "text",
+      "platform": "x",
+      "slot": "07:30",
+      "slot_offset_minutes": 0,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_01.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_01.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "threads-1",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "07:30",
+      "slot_offset_minutes": 0,
+      "text": "広告分析\n\n広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_01.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_01.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "facebook-1",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "07:30",
+      "slot_offset_minutes": 0,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_01.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_01.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "x-2",
+      "kind": "text",
+      "platform": "x",
+      "slot": "07:30",
+      "slot_offset_minutes": 1,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "threads-2",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "07:30",
+      "slot_offset_minutes": 1,
+      "text": "広告分析\n\nビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "facebook-2",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "07:30",
+      "slot_offset_minutes": 1,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "x-3",
+      "kind": "text",
+      "platform": "x",
+      "slot": "07:30",
+      "slot_offset_minutes": 2,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_02.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_02.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "threads-3",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "07:30",
+      "slot_offset_minutes": 2,
+      "text": "広告分析\n\n広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_02.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_02.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "facebook-3",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "07:30",
+      "slot_offset_minutes": 2,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_02.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_02.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "x-4",
+      "kind": "text",
+      "platform": "x",
+      "slot": "07:30",
+      "slot_offset_minutes": 3,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "threads-4",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "07:30",
+      "slot_offset_minutes": 3,
+      "text": "広告分析\n\nビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "facebook-4",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "07:30",
+      "slot_offset_minutes": 3,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "x-5",
+      "kind": "text",
+      "platform": "x",
+      "slot": "12:00",
+      "slot_offset_minutes": 0,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_03.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_03.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "threads-5",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "12:00",
+      "slot_offset_minutes": 0,
+      "text": "広告分析\n\n広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_03.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_03.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "facebook-5",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "12:00",
+      "slot_offset_minutes": 0,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_03.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_03.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "x-6",
+      "kind": "text",
+      "platform": "x",
+      "slot": "12:00",
+      "slot_offset_minutes": 1,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "threads-6",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "12:00",
+      "slot_offset_minutes": 1,
+      "text": "広告分析\n\nビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "facebook-6",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "12:00",
+      "slot_offset_minutes": 1,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "x-7",
+      "kind": "text",
+      "platform": "x",
+      "slot": "12:00",
+      "slot_offset_minutes": 2,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_04.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_04.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "threads-7",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "12:00",
+      "slot_offset_minutes": 2,
+      "text": "広告分析\n\n広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_04.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_04.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "facebook-7",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "12:00",
+      "slot_offset_minutes": 2,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_04.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_04.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "x-8",
+      "kind": "text",
+      "platform": "x",
+      "slot": "12:00",
+      "slot_offset_minutes": 3,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "threads-8",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "12:00",
+      "slot_offset_minutes": 3,
+      "text": "広告分析\n\nビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "facebook-8",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "12:00",
+      "slot_offset_minutes": 3,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "x-9",
+      "kind": "text",
+      "platform": "x",
+      "slot": "16:00",
+      "slot_offset_minutes": 0,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_05.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_05.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "threads-9",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "16:00",
+      "slot_offset_minutes": 0,
+      "text": "広告分析\n\n広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_05.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_05.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "facebook-9",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "16:00",
+      "slot_offset_minutes": 0,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_05.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_05.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "x-10",
+      "kind": "text",
+      "platform": "x",
+      "slot": "16:00",
+      "slot_offset_minutes": 1,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "threads-10",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "16:00",
+      "slot_offset_minutes": 1,
+      "text": "広告分析\n\nビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "facebook-10",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "16:00",
+      "slot_offset_minutes": 1,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "x-11",
+      "kind": "text",
+      "platform": "x",
+      "slot": "16:00",
+      "slot_offset_minutes": 2,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_06.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_06.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "threads-11",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "16:00",
+      "slot_offset_minutes": 2,
+      "text": "広告分析\n\n広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_06.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_06.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "facebook-11",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "16:00",
+      "slot_offset_minutes": 2,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_06.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_06.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "x-12",
+      "kind": "text",
+      "platform": "x",
+      "slot": "16:00",
+      "slot_offset_minutes": 3,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "threads-12",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "16:00",
+      "slot_offset_minutes": 3,
+      "text": "広告分析\n\nビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "facebook-12",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "16:00",
+      "slot_offset_minutes": 3,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "x-13",
+      "kind": "text",
+      "platform": "x",
+      "slot": "19:30",
+      "slot_offset_minutes": 0,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_07.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_07.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "threads-13",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "19:30",
+      "slot_offset_minutes": 0,
+      "text": "広告分析\n\n広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_07.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_07.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "facebook-13",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "19:30",
+      "slot_offset_minutes": 0,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_07.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_07.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "x-14",
+      "kind": "text",
+      "platform": "x",
+      "slot": "19:30",
+      "slot_offset_minutes": 1,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "threads-14",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "19:30",
+      "slot_offset_minutes": 1,
+      "text": "広告分析\n\nビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "facebook-14",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "19:30",
+      "slot_offset_minutes": 1,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "x-15",
+      "kind": "text",
+      "platform": "x",
+      "slot": "19:30",
+      "slot_offset_minutes": 2,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_08.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_08.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "threads-15",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "19:30",
+      "slot_offset_minutes": 2,
+      "text": "広告分析\n\n広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_08.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_08.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "facebook-15",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "19:30",
+      "slot_offset_minutes": 2,
+      "text": "広告分析",
+      "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_08.jpg",
+      "image_path": "deliverables/auto_post/28759006006/source/notion_image_08.jpg",
+      "status": "pending"
+    },
+    {
+      "id": "x-16",
+      "kind": "text",
+      "platform": "x",
+      "slot": "19:30",
+      "slot_offset_minutes": 3,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "threads-16",
+      "kind": "text",
+      "platform": "threads",
+      "slot": "19:30",
+      "slot_offset_minutes": 3,
+      "text": "広告分析\n\nビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "facebook-16",
+      "kind": "text",
+      "platform": "facebook",
+      "slot": "19:30",
+      "slot_offset_minutes": 3,
+      "text": "ビジネスモデル分析",
+      "image_url": null,
+      "image_path": null,
+      "status": "pending"
+    },
+    {
+      "id": "instagram-carousel-1",
+      "kind": "carousel",
+      "platform": "instagram",
+      "slot": "07:30",
+      "caption": "広告分析\n\n引用元：Notionページ内広告",
+      "image_urls": [
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_01.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_02.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_03.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_04.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_05.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_06.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_07.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_08.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_09.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_10.png"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "linkedin-carousel-1",
+      "kind": "linkedin_pdf",
+      "platform": "linkedin",
+      "slot": "07:30",
+      "caption": "広告分析\n\n引用元：Notionページ内広告",
+      "title": "広告分析",
+      "pdf_path": "deliverables/auto_post/28759006006/carousel_01/linkedin_carousel.pdf",
+      "pdf_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/linkedin_carousel.pdf",
+      "status": "pending"
+    },
+    {
+      "id": "instagram-reel-1",
+      "kind": "reel",
+      "platform": "instagram",
+      "slot": "07:30",
+      "caption": "勝ち広告を分析してみました\n\n引用元：Notionページ内広告",
+      "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/reel_01/reel.mp4",
+      "status": "pending"
+    },
+    {
+      "id": "youtube-short-1",
+      "kind": "youtube",
+      "platform": "youtube",
+      "slot": "07:30",
+      "title": "勝ち広告を分析してみました #Shorts",
+      "description": "勝ち広告を分析してみました\n\n引用元：Notionページ内広告",
+      "video_path": "deliverables/auto_post/28759006006/reel_01/reel.mp4",
+      "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/reel_01/reel.mp4",
+      "facebook_manual_video_path": "deliverables/facebook_manual/28759006006_facebook_personal_reel_01.mp4",
+      "facebook_manual_caption_path": "deliverables/facebook_manual/28759006006_facebook_personal_caption_01.txt",
+      "thumbnail_path": "deliverables/auto_post/28759006006/reel_01/thumbnail.png",
+      "thumbnail_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/reel_01/thumbnail.png",
+      "status": "pending"
+    },
+    {
+      "id": "instagram-carousel-2",
+      "kind": "carousel",
+      "platform": "instagram",
+      "slot": "19:30",
+      "caption": "広告分析\n\n引用元：Notionページ内広告",
+      "image_urls": [
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/slide_01.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/slide_02.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/slide_03.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/slide_04.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/slide_05.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/slide_06.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/slide_07.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/slide_08.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/slide_09.png",
+        "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/slide_10.png"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "linkedin-carousel-2",
+      "kind": "linkedin_pdf",
+      "platform": "linkedin",
+      "slot": "19:30",
+      "caption": "広告分析\n\n引用元：Notionページ内広告",
+      "title": "広告分析",
+      "pdf_path": "deliverables/auto_post/28759006006/carousel_02/linkedin_carousel.pdf",
+      "pdf_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/linkedin_carousel.pdf",
+      "status": "pending"
+    },
+    {
+      "id": "instagram-reel-2",
+      "kind": "reel",
+      "platform": "instagram",
+      "slot": "19:30",
+      "caption": "勝ち広告を分析してみました\n\n引用元：Notionページ内広告",
+      "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/reel_02/reel.mp4",
+      "status": "pending"
+    },
+    {
+      "id": "youtube-short-2",
+      "kind": "youtube",
+      "platform": "youtube",
+      "slot": "19:30",
+      "title": "勝ち広告を分析してみました #Shorts",
+      "description": "勝ち広告を分析してみました\n\n引用元：Notionページ内広告",
+      "video_path": "deliverables/auto_post/28759006006/reel_02/reel.mp4",
+      "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/reel_02/reel.mp4",
+      "facebook_manual_video_path": "deliverables/facebook_manual/28759006006_facebook_personal_reel_02.mp4",
+      "facebook_manual_caption_path": "deliverables/facebook_manual/28759006006_facebook_personal_caption_02.txt",
+      "thumbnail_path": "deliverables/auto_post/28759006006/reel_02/thumbnail.png",
+      "thumbnail_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/reel_02/thumbnail.png",
+      "status": "pending"
+    }
+  ]
 }
