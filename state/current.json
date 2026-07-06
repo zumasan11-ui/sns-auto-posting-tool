@@ -802,7 +802,10 @@
         "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/slide_09.png",
         "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_02/slide_10.png"
       ],
-      "status": "pending"
+      "status": "posted",
+      "post_url": "https://www.instagram.com/p/Dadh0HaE5hT/",
+      "posted_at": "2026-07-07T03:24:33.863495+09:00",
+      "error": ""
     },
     {
       "id": "linkedin-carousel-2",
