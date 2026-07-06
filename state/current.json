@@ -553,7 +553,8 @@
       "text": "ビジネスモデル分析",
       "image_url": null,
       "image_path": null,
-      "status": "pending"
+      "status": "error",
+      "error": "403 Forbidden\nYou are not allowed to create a Tweet with duplicate content."
     },
     {
       "id": "threads-12",
