@@ -135,7 +135,8 @@
       "text": "広告分析",
       "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_01.jpg",
       "image_path": "deliverables/auto_post/28759006006/source/notion_image_01.jpg",
-      "status": "pending"
+      "status": "error",
+      "error": "HTTP 400: {'error': {'message': 'Missing or invalid image file', 'type': 'OAuthException', 'code': 324, 'error_subcode': 2069019, 'is_transient': True, 'error_user_title': '画像は必須です', 'error_user_msg': 'ページの投稿に広告で使用できる画像が含まれていることを確認してください。', 'fbtrace_id': 'Ayz21b8LnIhp3WwfyyAF21R'}}"
     },
     {
       "id": "x-2",
