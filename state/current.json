@@ -278,7 +278,10 @@
       "text": "広告分析\n\n広告分析",
       "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_03.jpg",
       "image_path": "deliverables/auto_post/28759006006/source/notion_image_03.jpg",
-      "status": "pending"
+      "status": "posted",
+      "post_url": "Threads投稿ID: 17898473793528117",
+      "posted_at": "2026-07-06T23:46:02.180288+09:00",
+      "error": ""
     },
     {
       "id": "facebook-5",
