@@ -54,13 +54,22 @@ from reels_generator import (
     REEL_COVER_TITLE_TEMPLATE,
     REEL_STRUCTURED_PAGE_DURATION,
     REEL_STRUCTURED_TRANSITION,
+    ReelPage,
     ReelSpec,
     build_structured_reel_pages,
     post_instagram_reel,
     save_reel_thumbnail,
     write_structured_mp4,
 )
-from sheets_api import append_values, build_sheets_service, load_sheets_config
+from sheets_api import append_values, build_sheets_service, get_spreadsheet, load_sheets_config
+from sheets_api import read_values, update_values
+from scripts.sheet_formatting import freeze_row_height
+from scripts.prototype_single_ad_post_assets import (
+    render_dynamic_cover,
+    render_segment_text_slide,
+    render_today_ad_slide,
+    split_near_periods,
+)
 from token_refresh import ensure_token_fresh
 from youtube_poster import upload_youtube_short
 
@@ -72,13 +81,16 @@ STATE_DIR = Path(os.getenv("AUTO_POST_STATE_DIR", "public_state"))
 PUBLIC_ROOT = STATE_DIR / "public"
 STATE_FILE = STATE_DIR / "state" / "current.json"
 RUNTIME_DIR = Path("deliverables/auto_post")
-SLOTS = ("07:30", "12:00", "16:00", "19:30")
-TWO_SLOT_TIMES = ("07:30", "19:30")
+SLOTS = ("16:00", "20:30")
+TWO_SLOT_TIMES = ("16:00", "20:30")
 TEXT_PLATFORMS = ("x", "threads", "facebook")
 CAROUSEL_CAPTION = "広告分析"
 THREADS_MAX_TEXT_LENGTH = 500
 CIRCLED_DIGITS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
 PLATFORM_STATUS_PROPERTIES = ("X", "Threads", "Instagram", "Facebook", "LinkedIn", "YouTube")
+DEFAULT_AD_ANALYSIS_SPREADSHEET_ID = "15mskJs84UE7-CUtwELlCnjw3_DoWpAIYnZUvqiJvrdc"
+DEFAULT_AD_ANALYSIS_MASTER_SHEET = "広告分析マスターDB"
+DEFAULT_TODAY_AD_DB_SHEET = "今日の広告DB"
 
 
 @dataclass
@@ -87,7 +99,14 @@ class AdSection:
     text: str
     images: List[Path] = field(default_factory=list)
     companies: List[str] = field(default_factory=list)
+    source_caption: str = ""
     period_text: str = ""
+    company_name: str = ""
+    service_name: str = ""
+    ad_library_url: str = ""
+    lp_url: str = ""
+    sheet_row: Optional[int] = None
+    appeal_type: str = ""
 
 
 def now_jst() -> datetime:
@@ -262,9 +281,15 @@ def refresh_completed_platform_statuses(state: Dict[str, Any]) -> None:
 
 
 def oldest_page_by_status(statuses: Sequence[str]) -> Optional[Dict[str, Any]]:
+    pages = pages_by_status(statuses, page_size=1)
+    return pages[0] if pages else None
+
+
+def pages_by_status(statuses: Sequence[str], page_size: int = 20) -> List[Dict[str, Any]]:
     config = load_notion_config()
     db_props = database_properties(config)
     status_targets = resolve_status_targets(db_props)
+    matched_pages: List[Dict[str, Any]] = []
     for status in statuses:
         filters = []
         for status_name, status_type in status_targets:
@@ -279,13 +304,12 @@ def oldest_page_by_status(statuses: Sequence[str]) -> Optional[Dict[str, Any]]:
         filter_data = filters[0] if len(filters) == 1 else {"or": filters}
         pages = query_database(
             config,
-            page_size=1,
+            page_size=page_size,
             filter_data=filter_data,
             sorts=[{"timestamp": "created_time", "direction": "ascending"}],
         )
-        if pages:
-            return pages[0]
-    return None
+        matched_pages.extend(pages)
+    return matched_pages
 
 
 def ensure_state_branch() -> None:
@@ -369,6 +393,14 @@ def block_to_text(block: Dict[str, Any]) -> str:
     return ""
 
 
+def block_caption_text(block: Dict[str, Any]) -> str:
+    block_type = block.get("type")
+    if block_type not in ("image", "file", "pdf", "video"):
+        return ""
+    data = block.get(block_type, {})
+    return plain_text(data.get("caption", []))
+
+
 def block_file_url(block: Dict[str, Any]) -> Optional[str]:
     block_type = block.get("type")
     data = block.get(block_type, {})
@@ -427,8 +459,11 @@ def extract_sections(page: Dict[str, Any], work_dir: Path) -> List[AdSection]:
         if file_url:
             image_path = download_file(file_url, work_dir / "source", image_index)
             image_index += 1
+            caption = block_caption_text(block).strip()
             if current:
                 current.images.append(image_path)
+                if caption:
+                    current.source_caption = caption
             else:
                 images.append(image_path)
             continue
@@ -458,12 +493,64 @@ def extract_sections(page: Dict[str, Any], work_dir: Path) -> List[AdSection]:
             last_image = section.images[0]
         elif last_image and section.number % 2 == 1:
             section.images.append(last_image)
-        section.companies = extract_companies(section.text)
-        section.period_text = extract_period_text(section.text)
+        metadata = extract_section_metadata(section.source_caption + "\n" + section.text)
+        caption_company, caption_service = split_source_caption(section.source_caption)
+        section.company_name = caption_company or metadata.get("会社名", "")
+        section.service_name = caption_service or metadata.get("サービス名", "")
+        section.ad_library_url = metadata.get("広告ライブラリURL", "")
+        section.lp_url = metadata.get("LP URL", "")
+        section.sheet_row = int(metadata["スプレッドシート行"]) if metadata.get("スプレッドシート行", "").isdigit() else None
+        source_label = source_label_for(section.company_name, section.service_name)
+        section.companies = [source_label] if source_label else extract_companies(section.text)
+        section.period_text = extract_period_text(section.source_caption + "\n" + section.text)
+        section.appeal_type = extract_appeal_type(section.text)
     return sections
 
 
+def split_source_caption(caption: str) -> tuple[str, str]:
+    first_line = next((line.strip() for line in str(caption or "").splitlines() if line.strip()), "")
+    value = re.sub(r"^\s*[0-9０-９]+[.)．、]?\s*", "", first_line).strip()
+    if not value:
+        return "", ""
+    parts = [part.strip() for part in re.split(r"\s*/\s*|\s*／\s*", value, maxsplit=1)]
+    if len(parts) >= 2:
+        return parts[0], parts[1]
+    return value, ""
+
+
+def source_label_for(company: str, service: str) -> str:
+    company = company.strip()
+    service = service.strip()
+    if company and service:
+        return f"{company} / {service}"
+    return company or service
+
+
+def extract_section_metadata(text: str) -> Dict[str, str]:
+    metadata: Dict[str, str] = {}
+    for line in text.splitlines():
+        match = re.match(r"^\s*([^:：\n]{2,30})\s*[:：]\s*(.*)$", line.strip())
+        if not match:
+            continue
+        key = match.group(1).strip()
+        value = match.group(2).strip()
+        if key in ("ジャンル", "サブジャンル", "会社名", "サービス名", "掲載期間", "広告ライブラリURL", "広告URL", "LP URL", "スプレッドシート行"):
+            if key == "広告URL":
+                key = "広告ライブラリURL"
+            metadata[key] = value
+    return metadata
+
+
 def extract_companies(text: str) -> List[str]:
+    metadata = extract_section_metadata(text)
+    company = metadata.get("会社名", "").strip()
+    service = metadata.get("サービス名", "").strip()
+    if company and service:
+        return [f"{company} / {service}"]
+    if company:
+        return [company]
+    if service:
+        return [service]
     patterns = [
         r"引用元[:：]\s*([^\n]+)",
         r"会社名[:：]\s*([^\n]+)",
@@ -493,15 +580,113 @@ def extract_period_text(text: str) -> str:
     return "◯ヶ月"
 
 
-def caption_for(sections: Sequence[AdSection], title: str = "勝ち広告を分析してみました") -> str:
-    companies: List[str] = []
+def extract_appeal_type(text: str) -> str:
+    for line in str(text or "").splitlines():
+        match = re.match(r"^\s*訴求の型\s*[:：]\s*(.*)$", line.strip())
+        if match:
+            return match.group(1).strip()
+    return ""
+
+
+def extract_post_section(text: str, heading: str) -> str:
+    match = re.search(rf"【{re.escape(heading)}】\s*(.*?)(?=\n【|$)", text, re.S)
+    return match.group(1).strip() if match else ""
+
+
+def business_model_text(text: str) -> str:
+    return extract_post_section(text, "ビジネスモデル")
+
+
+def winning_reason_text(text: str) -> str:
+    return extract_post_section(text, "なぜこの広告が勝ってるか")
+
+
+def learning_text(text: str) -> str:
+    return extract_post_section(text, "広告の学び")
+
+
+def section_body_text(section: AdSection) -> str:
+    text = strip_numbering(section.text)
+    return strip_metadata_lines(text)
+
+
+def strip_metadata_lines(text: str) -> str:
+    lines = []
+    for line in text.splitlines():
+        if re.match(r"^\s*(ジャンル|サブジャンル|会社名|サービス名|掲載期間|広告ライブラリURL|LP URL|スプレッドシート行|広告スクショ|訴求の型)\s*[:：]", line):
+            continue
+        if re.match(r"^\s*(広告分析|ビジネスモデル分析)\s*[:：]\s*$", line):
+            continue
+        lines.append(line)
+    return "\n".join(lines).strip()
+
+
+PLACEHOLDER_POST_TEXTS = {
+    "",
+    "広告分析",
+    "ビジネスモデル分析",
+    "ビジネスモデル",
+    "訴求の型",
+}
+
+
+def is_meaningful_post_text(text: str) -> bool:
+    body = strip_metadata_lines(strip_numbering(str(text or ""))).strip()
+    body = re.sub(r"^引用元[:：].*$", "", body, flags=re.M).strip()
+    body = re.sub(r"^掲載期間[:：].*$", "", body, flags=re.M).strip()
+    normalized = re.sub(r"\s+", "", body)
+    if normalized in {re.sub(r'\s+', '', item) for item in PLACEHOLDER_POST_TEXTS}:
+        return False
+    required_markers = ("広告分析vol", "【ビジネスモデル】", "【なぜこの広告が勝ってるか】", "【広告の学び】")
+    return any(marker in body for marker in required_markers) and len(normalized) >= 40
+
+
+def task_is_meaningful(task: Dict[str, Any]) -> bool:
+    kind = str(task.get("kind") or "")
+    if kind in {"reel", "youtube"}:
+        text = str(task.get("caption") or task.get("description") or task.get("title") or "")
+        return "勝ち広告を分析してみましたvol." in text
+    return is_meaningful_post_text(task.get("text") or task.get("caption") or task.get("description") or "")
+
+
+def section_ready(section: AdSection) -> bool:
+    return is_meaningful_post_text(section_body_text(section))
+
+
+def ready_ad_numbers(sections: Sequence[AdSection]) -> set[int]:
+    ready = set()
+    for section in sections:
+        if section_ready(section):
+            ready.add(section.number)
+    return ready
+
+
+def source_lines_for(sections: Sequence[AdSection]) -> List[str]:
+    lines: List[str] = []
     for section in sections:
         for company in section.companies:
-            if company not in companies:
-                companies.append(company)
-    if not companies:
-        companies.append("Notionページ内広告")
-    return title + "\n\n" + "\n".join(f"引用元：{company}" for company in companies)
+            line = f"引用元：{company}"
+            if section.period_text:
+                line += f" / 掲載期間：{section.period_text}"
+            if line not in lines:
+                lines.append(line)
+    if not lines:
+        lines.append("引用元：Notionページ内広告")
+    return lines
+
+
+def caption_for(sections: Sequence[AdSection], title: str = "勝ち広告を分析してみました") -> str:
+    return title + "\n\n" + "\n".join(source_lines_for(sections))
+
+
+def video_caption_for(section: AdSection) -> str:
+    title = f"勝ち広告を分析してみましたvol.{section.number}"
+    return caption_for([section], title)
+
+
+def text_post_for(section: AdSection) -> str:
+    text = section_body_text(section)
+    return (text + "\n\n" + "\n".join(source_lines_for([section]))).strip()
 
 
 def hyperlink_formula(url: str, label: Optional[str] = None) -> str:
@@ -510,9 +695,11 @@ def hyperlink_formula(url: str, label: Optional[str] = None) -> str:
     return f'=HYPERLINK("{escaped_url}","{escaped_label}")'
 
 
+def quote_sheet_name(name: str) -> str:
+    return "'" + name.replace("'", "''") + "'"
+
+
 def text_for_platform(platform: str, text: str) -> str:
-    if platform == "threads":
-        return f"{CAROUSEL_CAPTION}\n\n{text}".strip()
     return text
 
 
@@ -560,10 +747,50 @@ def chunked(values: Sequence[Any], size: int) -> List[List[Any]]:
 
 
 def render_carousel_business_slide(index: int, total: int, text: str) -> Image.Image:
-    return render_text_slide("ビジネスモデル", strip_numbering(text))
+    return render_text_slide("ビジネスモデル", strip_metadata_lines(strip_numbering(text)))
+
+
+def render_single_ad_carousel(section: AdSection, output_dir: Path) -> Dict[str, Any]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if not section.images:
+        raise RuntimeError("カルーセル生成に使う広告画像がありません。")
+
+    screenshot = Image.open(section.images[0])
+    body = section_body_text(section)
+    business = business_model_text(body)
+    why = winning_reason_text(body)
+    learning = learning_text(body)
+    company = section.company_name or (section.companies[0].split(" / ", 1)[0] if section.companies else "")
+    service = section.service_name or (section.companies[0].split(" / ", 1)[1] if section.companies and " / " in section.companies[0] else "")
+
+    slides: List[tuple[str, Image.Image]] = [
+        ("slide_01_cover.png", render_dynamic_cover(section.period_text or "◯ヶ月", screenshot)),
+        ("slide_02_ad.png", render_today_ad_slide(company, service, screenshot, "w5")),
+    ]
+    for index, chunk in enumerate(split_near_periods(business, 3), start=1):
+        slides.append((f"slide_{index + 2:02d}_business.png", render_segment_text_slide("ビジネスモデル", f"{index}/3", chunk, "w5", "top-right")))
+    for index, chunk in enumerate(split_near_periods(why, 3), start=1):
+        slides.append((f"slide_{index + 5:02d}_why.png", render_segment_text_slide("なぜこの広告が勝ってるか", f"{index}/3", chunk, "w5", "top-right")))
+    slides.append(("slide_09_learning.png", render_segment_text_slide("今日の広告の学び", "", learning, "w5", "top-right")))
+    slides.append(("slide_10_ending.png", render_carousel_ending_slide()))
+
+    images: List[Image.Image] = []
+    paths: List[Path] = []
+    for filename, image in slides:
+        path = output_dir / filename
+        image.save(path)
+        images.append(image)
+        paths.append(path)
+
+    pdf_path = output_dir / "linkedin_carousel.pdf"
+    save_pdf(images, pdf_path)
+    return {"slides": paths, "pdf": pdf_path}
 
 
 def render_carousel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Dict[str, Any]:
+    if len(sections) == 1:
+        return render_single_ad_carousel(sections[0], output_dir)
+
     output_dir.mkdir(parents=True, exist_ok=True)
     slides = []
     image_urls = []
@@ -593,14 +820,14 @@ def render_carousel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Di
 
     for index, section in enumerate(content_sections, start=2):
         if section.number % 2 == 0:
-            slide = render_carousel_business_slide(index, 10, section.text)
+            slide = render_text_slide("ビジネスモデル", section_body_text(section))
         else:
             ad_index += 1
             image_path = section.images[0] if section.images else None
             if image_path is None:
                 raise RuntimeError("カルーセル生成に使う画像がありません。")
             ad_label = CIRCLED_DIGITS[ad_index - 1] if ad_index <= len(CIRCLED_DIGITS) else str(ad_index)
-            slide = render_slide(index, 10, f"広告分析{ad_label}", strip_numbering(section.text), Image.open(image_path))
+            slide = render_slide(index, 10, f"広告分析{ad_label}", section_body_text(section), Image.open(image_path))
         slide_path = output_dir / f"slide_{index:02d}.png"
         slide.save(slide_path)
         slides.append(slide)
@@ -618,13 +845,31 @@ def render_carousel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Di
 
 
 def render_reel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Path:
+    if len(sections) == 1:
+        carousel = render_single_ad_carousel(sections[0], output_dir / "pages_source")
+        reel_spec = ReelSpec(
+            slide_duration=2.4,
+            fade_duration=0,
+            transition=REEL_STRUCTURED_TRANSITION,
+            ending_duration=2.0,
+        )
+        video_slide_paths = carousel["slides"][:-1]
+        pages = [
+            ReelPage(path, 1.5 if index == 0 else 2.4)
+            for index, path in enumerate(video_slide_paths)
+        ]
+        save_reel_thumbnail(pages, output_dir)
+        video_path = output_dir / "reel.mp4"
+        write_structured_mp4(pages, video_path, reel_spec)
+        return video_path
+
     ad_sections = [section for section in sections if section.number % 2 == 1]
     business_sections = [section for section in sections if section.number % 2 == 0]
     ad_images = [section.images[0] for section in ad_sections if section.images]
     if not ad_images:
         raise RuntimeError("Reels生成に使う画像がありません。")
-    ad_texts = [strip_numbering(section.text) for section in ad_sections]
-    business_texts = [strip_numbering(section.text) for section in business_sections] or ad_texts
+    ad_texts = [section_body_text(section) for section in ad_sections]
+    business_texts = [section_body_text(section) for section in business_sections] or ad_texts
     period = sections[0].period_text or "◯ヶ月"
     title = REEL_COVER_TITLE_TEMPLATE.format(period=period)
     reel_spec = ReelSpec(
@@ -670,28 +915,56 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
         save_state(existing_state)
         return existing_state
 
-    page = oldest_page_by_status(("進行中", "エラー", "未投稿"))
-    if not page:
+    candidate_pages = pages_by_status(("進行中", "エラー", "未投稿", "未着手"), page_size=20)
+    if not candidate_pages:
         state = {"status": "idle", "message": "未投稿ページがありません。", "created_at": now_jst().isoformat()}
         save_state(state)
         return state
 
-    page_id = page["id"]
-    update_notion_status(page_id, "進行中")
     run_id = os.getenv("GITHUB_RUN_ID", now_jst().strftime("%Y%m%d%H%M%S"))
+    selected_page: Optional[Dict[str, Any]] = None
+    selected_sections: List[AdSection] = []
     work_dir = RUNTIME_DIR / run_id
     if work_dir.exists():
         shutil.rmtree(work_dir)
-    sections = extract_sections(page, work_dir)
+    skipped_not_ready = []
+    for page in candidate_pages:
+        page_work_dir = work_dir / page["id"].replace("-", "")
+        sections = extract_sections(page, page_work_dir)
+        ready_numbers = ready_ad_numbers(sections)
+        if ready_numbers:
+            selected_page = page
+            selected_sections = [
+                section
+                for section in sections
+                if section.number in ready_numbers
+            ]
+            break
+        skipped_not_ready.append(get_page_title(page))
+    if not selected_page:
+        state = {
+            "status": "idle",
+            "message": "投稿できる分析入力済みページがありません。",
+            "skipped_not_ready": skipped_not_ready,
+            "created_at": now_jst().isoformat(),
+        }
+        save_state(state)
+        return state
+
+    page = selected_page
+    page_id = page["id"]
+    update_notion_status(page_id, "進行中")
+    sections = selected_sections
     if not sections:
-        raise RuntimeError("投稿に使える番号付き本文がありません。")
+        raise RuntimeError("投稿に使える入力済み本文がありません。")
 
     asset_prefix = Path("runs") / run_id
     tasks: List[Dict[str, Any]] = []
-    text_slots = ["now"] * len(sections) if run_now else distribute(sections, SLOTS)
+    posting_slots = ["now"] * len(sections) if run_now else distribute(sections, SLOTS)
+    text_slots = posting_slots
     text_offsets = [0] * len(sections) if run_now else offset_minutes_by_slot(text_slots)
     for section, slot, offset_minutes in zip(sections, text_slots, text_offsets):
-        text = strip_numbering(section.text)
+        text = text_post_for(section)
         image_url = None
         image_path = None
         if section.images:
@@ -712,8 +985,8 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                 }
             )
 
-    content_chunks = chunked(sections[:], CAROUSEL_MAX_ADS * 2)
-    media_slots = ["now"] * len(content_chunks) if run_now else (["19:30"] if len(content_chunks) == 1 else distribute(content_chunks, TWO_SLOT_TIMES))
+    content_chunks = [[section] for section in sections]
+    media_slots = posting_slots
     for chunk_index, (chunk, slot) in enumerate(zip(content_chunks, media_slots), start=1):
         carousel = render_carousel_chunk(chunk, work_dir / f"carousel_{chunk_index:02d}")
         slide_urls = [
@@ -724,8 +997,9 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
             slide_urls.append(slide_urls[0])
         pdf_public_url = copy_public(carousel["pdf"], asset_prefix / f"carousel_{chunk_index:02d}" / "linkedin_carousel.pdf")
         reel_path = render_reel_chunk(chunk, work_dir / f"reel_{chunk_index:02d}")
-        video_caption = caption_for(chunk)
-        carousel_caption = caption_for(chunk, CAROUSEL_CAPTION)
+        section = chunk[0]
+        video_caption = video_caption_for(section)
+        carousel_caption = section_body_text(section) + "\n\n" + "\n".join(source_lines_for([section]))
         facebook_manual_paths = export_facebook_manual_video(
             reel_path,
             run_id=run_id,
@@ -771,7 +1045,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "kind": "youtube",
                     "platform": "youtube",
                     "slot": slot,
-                    "title": "勝ち広告を分析してみました #Shorts",
+                    "title": f"勝ち広告を分析してみましたvol.{section.number} #Shorts",
                     "description": video_caption,
                     "video_path": str(reel_path),
                     "video_url": reel_url,
@@ -797,6 +1071,12 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                 "text": section.text,
                 "companies": section.companies,
                 "period_text": section.period_text,
+                "company_name": section.company_name,
+                "service_name": section.service_name,
+                "ad_library_url": section.ad_library_url,
+                "lp_url": section.lp_url,
+                "sheet_row": section.sheet_row,
+                "appeal_type": section.appeal_type,
             }
             for section in sections
         ],
@@ -964,11 +1244,17 @@ def execute_task(task: Dict[str, Any]) -> str:
 
 def due_tasks(state: Dict[str, Any], slot: str, run_now: bool) -> List[Dict[str, Any]]:
     if run_now:
-        return [task for task in state.get("tasks", []) if task.get("status") != "posted"]
+        return [
+            task
+            for task in state.get("tasks", [])
+            if task.get("status") != "posted" and task_is_meaningful(task)
+        ]
     tasks = [
         task
         for task in state.get("tasks", [])
-        if task.get("slot") == slot and task.get("status") != "posted"
+        if task.get("slot") == slot
+        and task.get("status") != "posted"
+        and task_is_meaningful(task)
     ]
     return sorted(
         tasks,
@@ -992,44 +1278,207 @@ def wait_for_slot_offset(task: Dict[str, Any], started_at: float, run_now: bool)
         time.sleep(remaining)
 
 
+def sheet_id_for(service: Any, spreadsheet_id: str, sheet_name: str) -> int:
+    spreadsheet = get_spreadsheet(service, spreadsheet_id)
+    for sheet in spreadsheet.get("sheets", []):
+        properties = sheet.get("properties", {})
+        if properties.get("title") == sheet_name:
+            return int(properties["sheetId"])
+    raise RuntimeError(f"シートが見つかりません: {sheet_name}")
+
+
+def column_letter(index: int) -> str:
+    result = ""
+    index += 1
+    while index:
+        index, rem = divmod(index - 1, 26)
+        result = chr(ord("A") + rem) + result
+    return result
+
+
+def ensure_headers(service: Any, spreadsheet_id: str, sheet_name: str, headers: List[str], required_headers: Sequence[str]) -> List[str]:
+    changed = False
+    next_headers = list(headers)
+    for header in required_headers:
+        if header not in next_headers:
+            next_headers.append(header)
+            changed = True
+    if changed:
+        end = column_letter(len(next_headers) - 1)
+        update_values(service, spreadsheet_id, f"{quote_sheet_name(sheet_name)}!A1:{end}1", [next_headers])
+    return next_headers
+
+
+def row_to_header_map(row: List[Any], headers: List[str]) -> Dict[str, Any]:
+    return {header: row[index] if index < len(row) else "" for index, header in enumerate(headers)}
+
+
+def build_row_for_headers(values: Dict[str, Any], headers: List[str]) -> List[Any]:
+    return [values.get(header, "") for header in headers]
+
+
+def sort_master_by_genre(service: Any, spreadsheet_id: str, sheet_name: str, headers: List[str], row_count: int) -> None:
+    if row_count <= 2 or "ジャンル" not in headers:
+        return
+    sheet_id = sheet_id_for(service, spreadsheet_id, sheet_name)
+    sort_specs = [{"dimensionIndex": headers.index("ジャンル"), "sortOrder": "ASCENDING"}]
+    if "サブジャンル" in headers:
+        sort_specs.append({"dimensionIndex": headers.index("サブジャンル"), "sortOrder": "ASCENDING"})
+    if "サービス名" in headers:
+        sort_specs.append({"dimensionIndex": headers.index("サービス名"), "sortOrder": "ASCENDING"})
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={
+            "requests": [
+                {
+                    "sortRange": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": 1,
+                            "endRowIndex": row_count,
+                            "startColumnIndex": 0,
+                            "endColumnIndex": len(headers),
+                        },
+                        "sortSpecs": sort_specs,
+                    }
+                }
+            ]
+        },
+    ).execute()
+
+
+def delete_sheet_rows(service: Any, spreadsheet_id: str, sheet_name: str, row_numbers: Sequence[int]) -> None:
+    if not row_numbers:
+        return
+    sheet_id = sheet_id_for(service, spreadsheet_id, sheet_name)
+    requests = [
+        {
+            "deleteDimension": {
+                "range": {
+                    "sheetId": sheet_id,
+                    "dimension": "ROWS",
+                    "startIndex": row_number - 1,
+                    "endIndex": row_number,
+                }
+            }
+        }
+        for row_number in sorted({int(row) for row in row_numbers if int(row) >= 2}, reverse=True)
+    ]
+    if requests:
+        service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests}).execute()
+
+
 def append_sheet_row(state: Dict[str, Any]) -> None:
     sections = state.get("sections", [])
-    service_name = state.get("title", "広告分析")
     x_urls_by_section = {
         int(str(task.get("id", "")).split("-", 1)[1]): task.get("post_url", "")
         for task in state.get("tasks", [])
         if task.get("platform") == "x" and task.get("post_url") and str(task.get("id", "")).startswith("x-")
     }
     sections_by_number = {int(section.get("number", 0)): section for section in sections}
-    rows: List[List[str]] = []
+    completed_ads: List[Dict[str, Any]] = []
     for section in sections:
         number = int(section.get("number", 0))
-        if number % 2 == 0:
-            continue
-        analysis = strip_numbering(str(section.get("text", "")))
-        business_section = sections_by_number.get(number + 1, {})
-        business = strip_numbering(str(business_section.get("text", "")))
+        analysis = section_body_text(AdSection(number=number, text=str(section.get("text", ""))))
+        business = business_model_text(analysis)
         genre = infer_genre(business or analysis)
         x_url = x_urls_by_section.get(number, "")
-        rows.append(
-            [
-                genre,
-                service_name,
-                analysis,
-                business,
-                hyperlink_formula(x_url) if x_url else "",
-            ]
+        completed_ads.append(
+            {
+                "number": number,
+                "genre": genre,
+                "service_name": section.get("service_name", ""),
+                "company_name": section.get("company_name", ""),
+                "ad_library_url": section.get("ad_library_url", ""),
+                "sheet_row": section.get("sheet_row"),
+                "analysis": analysis,
+                "business": business,
+                "appeal_type": section.get("appeal_type", ""),
+                "x_url": hyperlink_formula(x_url) if x_url else "",
+            }
         )
-    if not rows:
+    if not completed_ads:
         return
     config = load_sheets_config()
     service = build_sheets_service(config)
-    append_values(
+    today_sheet = os.getenv("TODAY_AD_DB_SHEET", DEFAULT_TODAY_AD_DB_SHEET)
+    master_sheet = os.getenv("AD_ANALYSIS_MASTER_SHEET", DEFAULT_AD_ANALYSIS_MASTER_SHEET)
+    spreadsheet_id = os.getenv("AD_ANALYSIS_SPREADSHEET_ID", DEFAULT_AD_ANALYSIS_SPREADSHEET_ID)
+    today_values = read_values(service, spreadsheet_id, f"{quote_sheet_name(today_sheet)}!A1:AZ")
+    master_values = read_values(service, spreadsheet_id, f"{quote_sheet_name(master_sheet)}!A1:AZ")
+    today_headers = today_values[0] if today_values else []
+    master_headers = master_values[0] if master_values else today_headers
+    master_headers = ensure_headers(
         service,
-        config["spreadsheet_id"],
-        config["default_sheet"],
-        rows,
+        spreadsheet_id,
+        master_sheet,
+        master_headers,
+        ["訴求の型", "分析日", "状況", "最終掲載期間"],
     )
+    today_headers = ensure_headers(
+        service,
+        spreadsheet_id,
+        today_sheet,
+        today_headers,
+        ["訴求の型"],
+    )
+    if {"広告ライブラリURL", "広告分析", "ビジネスモデル", "訴求の型"}.difference(set(today_headers)):
+        raise RuntimeError(f"{today_sheet} に必要なヘッダーがありません。")
+    if {"広告ライブラリURL", "広告分析", "ビジネスモデル", "訴求の型"}.difference(set(master_headers)):
+        raise RuntimeError(f"{master_sheet} に必要なヘッダーがありません。")
+
+    today_index = {header: index for index, header in enumerate(today_headers)}
+    url_to_row = {}
+    rows_by_number = {}
+    for row_number, row in enumerate(today_values[1:], start=2):
+        rows_by_number[row_number] = row
+        url_index = today_index["広告ライブラリURL"]
+        if url_index < len(row) and row[url_index]:
+            url_to_row[str(row[url_index]).strip()] = row_number
+
+    master_rows: List[List[Any]] = []
+    delete_rows: List[int] = []
+    today_updates: Dict[int, Dict[str, Any]] = {}
+    for ad in completed_ads:
+        target_row = int(ad["sheet_row"]) if str(ad.get("sheet_row") or "").isdigit() else None
+        if not target_row and ad["ad_library_url"]:
+            target_row = url_to_row.get(str(ad["ad_library_url"]).strip())
+        if not target_row or target_row not in rows_by_number:
+            continue
+
+        current = row_to_header_map(rows_by_number[target_row], today_headers)
+        updates = {
+            "分析状況": "分析済み",
+            "会社名": ad["company_name"] or current.get("会社名", ""),
+            "サービス名": ad["service_name"] or current.get("サービス名", ""),
+            "広告分析": ad["analysis"],
+            "ビジネスモデル": ad["business"],
+            "訴求の型": ad["appeal_type"],
+            "X投稿URL": ad["x_url"],
+            "分析日": now_jst().strftime("%Y-%m-%d"),
+            "状況": "掲載中",
+        }
+        if not current.get("ジャンル") and ad.get("genre"):
+            updates["ジャンル"] = ad["genre"]
+        current.update({key: value for key, value in updates.items() if value not in (None, "")})
+        today_updates[target_row] = updates
+        master_rows.append(build_row_for_headers(current, master_headers))
+        delete_rows.append(target_row)
+
+    for row_number, updates in today_updates.items():
+        for header, value in updates.items():
+            if header not in today_index or value in (None, ""):
+                continue
+            column = chr(ord("A") + today_index[header])
+            update_values(service, spreadsheet_id, f"{quote_sheet_name(today_sheet)}!{column}{row_number}:{column}{row_number}", [[value]])
+
+    if master_rows:
+        append_values(service, spreadsheet_id, f"{quote_sheet_name(master_sheet)}!A:AZ", master_rows)
+        refreshed_master = read_values(service, spreadsheet_id, f"{quote_sheet_name(master_sheet)}!A1:AZ")
+        sort_master_by_genre(service, spreadsheet_id, master_sheet, master_headers, len(refreshed_master))
+        delete_sheet_rows(service, spreadsheet_id, today_sheet, delete_rows)
+        freeze_row_height(service, spreadsheet_id, master_sheet, pixel_size=20)
+        freeze_row_height(service, spreadsheet_id, today_sheet, pixel_size=20)
 
 
 def execute_due(slot: str, run_now: bool = False) -> Dict[str, Any]:
@@ -1079,7 +1528,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Notion広告分析ページをSNSへ完全自動投稿します。")
     parser.add_argument("--prepare", action="store_true", help="最古の未投稿ページを取得し、アセットと投稿計画を作成します。")
     parser.add_argument("--execute", action="store_true", help="指定スロットの投稿を実行します。")
-    parser.add_argument("--slot", default=os.getenv("POST_SLOT", "now"), help="07:30 / 12:00 / 16:00 / 19:30 / now")
+    parser.add_argument("--slot", default=os.getenv("POST_SLOT", "now"), help="16:00 / 20:30 / now")
     parser.add_argument("--run-now", action="store_true", help="テスト用に全タスクを即時実行します。")
     return parser.parse_args()
 
