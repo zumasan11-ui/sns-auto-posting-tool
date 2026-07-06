@@ -665,7 +665,8 @@
       "title": "広告分析",
       "pdf_path": "deliverables/auto_post/28759006006/carousel_01/linkedin_carousel.pdf",
       "pdf_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/linkedin_carousel.pdf",
-      "status": "pending"
+      "status": "error",
+      "error": "404 Client Error: Not Found for url: https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/linkedin_carousel.pdf"
     },
     {
       "id": "instagram-reel-1",
