@@ -825,7 +825,10 @@
       "slot": "19:30",
       "caption": "勝ち広告を分析してみました\n\n引用元：Notionページ内広告",
       "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/reel_02/reel.mp4",
-      "status": "pending"
+      "status": "posted",
+      "post_url": "https://www.instagram.com/reel/Dadh19rCQum/",
+      "posted_at": "2026-07-07T03:25:11.390170+09:00",
+      "error": ""
     },
     {
       "id": "youtube-short-2",
