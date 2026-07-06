@@ -191,7 +191,8 @@
       "text": "広告分析",
       "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_02.jpg",
       "image_path": "deliverables/auto_post/28759006006/source/notion_image_02.jpg",
-      "status": "pending"
+      "status": "error",
+      "error": "404 Client Error: Not Found for url: https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_02.jpg"
     },
     {
       "id": "threads-3",
