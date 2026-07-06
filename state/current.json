@@ -124,7 +124,8 @@
       "text": "広告分析\n\n広告分析",
       "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_01.jpg",
       "image_path": "deliverables/auto_post/28759006006/source/notion_image_01.jpg",
-      "status": "pending"
+      "status": "error",
+      "error": "HTTP 400: {'error': {'message': 'An unknown error occurred', 'type': 'OAuthException', 'code': 1, 'error_subcode': 2207052, 'is_transient': False, 'error_user_title': \"Media download has failed. The media URI doesn't meet our requirements.\", 'error_user_msg': 'The media could not be fetched from this URI: https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_01.jpg.Please check the limitations section in our development document for more information: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media#creating', 'fbtrace_id': 'AeRx4CuyUvxDgZpZCCru6CV'}}"
     },
     {
       "id": "facebook-1",
