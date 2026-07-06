@@ -674,7 +674,8 @@
       "slot": "07:30",
       "caption": "勝ち広告を分析してみました\n\n引用元：Notionページ内広告",
       "video_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/reel_01/reel.mp4",
-      "status": "pending"
+      "status": "error",
+      "error": "Instagram Reelsコンテナ作成に失敗しました: {'status_code': 'ERROR', 'id': '18011081999870485'}"
     },
     {
       "id": "youtube-short-1",
