@@ -18,18 +18,8 @@ on:
         type: choice
         options:
           - "now"
-          - "07:30"
-          - "12:00"
           - "16:00"
-          - "19:30"
-  schedule:
-    # JST 05:00: prepare the oldest target page and publish generated assets.
-    - cron: "0 20 * * *"
-    # JST 07:30 / 12:00 / 16:00 / 19:30: execute due posts.
-    - cron: "30 22 * * *"
-    - cron: "0 3 * * *"
-    - cron: "0 7 * * *"
-    - cron: "30 10 * * *"
+          - "20:30"
 
 permissions:
   contents: write
@@ -102,6 +92,11 @@ jobs:
       GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}
       NOTION_STATUS_PROPERTY: ${{ secrets.NOTION_STATUS_PROPERTY }}
       NOTION_ERROR_PROPERTY: ${{ secrets.NOTION_ERROR_PROPERTY }}
+      NOTION_DAILY_AD_PAGE_INITIAL_STATUS: ${{ secrets.NOTION_DAILY_AD_PAGE_INITIAL_STATUS }}
+      DAILY_AD_ANALYSIS_COUNT: ${{ secrets.DAILY_AD_ANALYSIS_COUNT }}
+      AD_ANALYSIS_SPREADSHEET_ID: ${{ secrets.AD_ANALYSIS_SPREADSHEET_ID }}
+      AD_ANALYSIS_MASTER_SHEET: ${{ secrets.AD_ANALYSIS_MASTER_SHEET }}
+      TODAY_AD_DB_SHEET: ${{ secrets.TODAY_AD_DB_SHEET }}
       GH_TOKEN: ${{ secrets.GH_SECRETS_TOKEN }}
 
     steps:
@@ -149,6 +144,8 @@ jobs:
               "NOTION_TOKEN", "NOTION_DATABASE_ID", "NOTION_VERSION",
               "GOOGLE_SHEETS_SPREADSHEET_ID", "GOOGLE_SHEETS_DEFAULT_SHEET",
               "NOTION_STATUS_PROPERTY", "NOTION_ERROR_PROPERTY",
+              "NOTION_DAILY_AD_PAGE_INITIAL_STATUS", "DAILY_AD_ANALYSIS_COUNT",
+              "AD_ANALYSIS_SPREADSHEET_ID", "AD_ANALYSIS_MASTER_SHEET", "TODAY_AD_DB_SHEET",
           ]
           lines = []
           for key in env_keys:
@@ -177,18 +174,12 @@ jobs:
           elif [ "${{ github.event.schedule }}" = "0 20 * * *" ]; then
             echo "run_now=false" >> "$GITHUB_OUTPUT"
             echo "slot=prepare" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event.schedule }}" = "30 22 * * *" ]; then
-            echo "run_now=false" >> "$GITHUB_OUTPUT"
-            echo "slot=07:30" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event.schedule }}" = "0 3 * * *" ]; then
-            echo "run_now=false" >> "$GITHUB_OUTPUT"
-            echo "slot=12:00" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "0 7 * * *" ]; then
             echo "run_now=false" >> "$GITHUB_OUTPUT"
             echo "slot=16:00" >> "$GITHUB_OUTPUT"
           else
             echo "run_now=false" >> "$GITHUB_OUTPUT"
-            echo "slot=19:30" >> "$GITHUB_OUTPUT"
+            echo "slot=20:30" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Prepare daily assets
