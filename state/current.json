@@ -653,7 +653,8 @@
         "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_09.png",
         "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_10.png"
       ],
-      "status": "pending"
+      "status": "error",
+      "error": "HTTP 400: {'error': {'message': 'Only photo or video can be accepted as media type.', 'type': 'OAuthException', 'code': 9004, 'error_subcode': 2207052, 'is_transient': False, 'error_user_title': 'メディアをダウンロードできませんでした。メディアURIが要件を満たしていません。', 'error_user_msg': '次のURIからメディアを取得できませんでした: https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/carousel_01/slide_01.png。詳細については、開発者向けドキュメントの「制限」セクションをご確認ください: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media#creating', 'fbtrace_id': 'ANUGQps5iGWIRznssOcKJtZ'}}"
     },
     {
       "id": "linkedin-carousel-1",
