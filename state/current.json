@@ -846,7 +846,8 @@
       "facebook_manual_caption_path": "deliverables/facebook_manual/28759006006_facebook_personal_caption_02.txt",
       "thumbnail_path": "deliverables/auto_post/28759006006/reel_02/thumbnail.png",
       "thumbnail_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/reel_02/thumbnail.png",
-      "status": "pending"
+      "status": "error",
+      "error": "('invalid_grant: Token has been expired or revoked.', {'error': 'invalid_grant', 'error_description': 'Token has been expired or revoked.'})"
     }
   ]
 }
