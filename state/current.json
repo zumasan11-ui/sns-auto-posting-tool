@@ -267,7 +267,10 @@
       "text": "広告分析",
       "image_url": "https://zumasan11-ui.github.io/sns-auto-posting-tool/public/runs/28759006006/source/notion_image_03.jpg",
       "image_path": "deliverables/auto_post/28759006006/source/notion_image_03.jpg",
-      "status": "pending"
+      "status": "posted",
+      "post_url": "https://x.com/i/web/status/2074142846706159951",
+      "posted_at": "2026-07-06T23:46:05.192422+09:00",
+      "error": ""
     },
     {
       "id": "threads-5",
