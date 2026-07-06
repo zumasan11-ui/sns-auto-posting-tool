@@ -649,6 +649,10 @@ def task_is_meaningful(task: Dict[str, Any]) -> bool:
     return is_meaningful_post_text(task.get("text") or task.get("caption") or task.get("description") or "")
 
 
+def state_has_meaningful_pending_tasks(state: Dict[str, Any]) -> bool:
+    return any(task.get("status") != "posted" and task_is_meaningful(task) for task in state.get("tasks", []))
+
+
 def section_ready(section: AdSection) -> bool:
     return is_meaningful_post_text(section_body_text(section))
 
@@ -909,7 +913,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
         existing_state
         and existing_state.get("status") in ("planned", "error")
         and existing_state.get("page_id")
-        and any(task.get("status") != "posted" for task in existing_state.get("tasks", []))
+        and state_has_meaningful_pending_tasks(existing_state)
     ):
         existing_state["status"] = "planned"
         save_state(existing_state)
