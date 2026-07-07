@@ -4,7 +4,7 @@ import argparse
 import re
 import sys
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -147,10 +147,11 @@ def main() -> int:
         raise RuntimeError("分割できる広告画像ブロックが見つかりません。")
 
     created: List[Dict[str, Any]] = []
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    now = datetime.now()
     for index, start in enumerate(range(0, len(ads), args.chunk_size), start=1):
         chunk = ads[start : start + args.chunk_size]
-        title = f"{now} 広告分析 {index}/{(len(ads) + args.chunk_size - 1) // args.chunk_size}"
+        title_time = (now + timedelta(minutes=index - 1)).strftime("%Y-%m-%d %H:%M")
+        title = f"{title_time} 広告分析 {index}/{(len(ads) + args.chunk_size - 1) // args.chunk_size}"
         if args.dry_run:
             created.append({"dry_run": True, "title": title, "ads": len(chunk)})
         else:

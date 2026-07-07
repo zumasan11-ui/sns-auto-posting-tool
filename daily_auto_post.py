@@ -290,6 +290,7 @@ def pages_by_status(statuses: Sequence[str], page_size: int = 20) -> List[Dict[s
     db_props = database_properties(config)
     status_targets = resolve_status_targets(db_props)
     matched_pages: List[Dict[str, Any]] = []
+    seen_page_ids: set[str] = set()
     for status in statuses:
         filters = []
         for status_name, status_type in status_targets:
@@ -308,8 +309,13 @@ def pages_by_status(statuses: Sequence[str], page_size: int = 20) -> List[Dict[s
             filter_data=filter_data,
             sorts=[{"timestamp": "created_time", "direction": "ascending"}],
         )
-        matched_pages.extend(pages)
-    return matched_pages
+        for page in pages:
+            page_id = str(page.get("id") or "")
+            if not page_id or page_id in seen_page_ids:
+                continue
+            seen_page_ids.add(page_id)
+            matched_pages.append(page)
+    return sorted(matched_pages, key=lambda page: (str(page.get("created_time") or ""), get_page_title(page)))
 
 
 def ensure_state_branch() -> None:
