@@ -73,6 +73,7 @@ from scripts.prototype_single_ad_post_assets import (
 from token_refresh import ensure_token_fresh
 from youtube_community_export import export_youtube_community_images
 from youtube_poster import upload_youtube_short
+from tiktok_poster import upload_tiktok_video
 
 
 JST_TZ = "Asia/Tokyo"
@@ -82,17 +83,26 @@ STATE_DIR = Path(os.getenv("AUTO_POST_STATE_DIR", "public_state"))
 PUBLIC_ROOT = STATE_DIR / "public"
 STATE_FILE = STATE_DIR / "state" / "current.json"
 RUNTIME_DIR = Path("deliverables/auto_post")
-SLOTS = ("16:00", "20:30")
-TWO_SLOT_TIMES = ("16:00", "20:30")
+TEXT_SLOTS = ("12:00", "18:00")
+MEDIA_SLOTS = ("16:00", "20:30")
+SLOTS = ("12:00", "16:00", "18:00", "20:30")
+TWO_SLOT_TIMES = TEXT_SLOTS
+DAILY_MAX_POST_SECTIONS = 2
 TEXT_PLATFORMS = ("x", "threads", "facebook")
 CAROUSEL_CAPTION = "広告分析"
 THREADS_MAX_TEXT_LENGTH = 500
 CIRCLED_DIGITS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
-PLATFORM_STATUS_PROPERTIES = ("X", "Threads", "Instagram", "Facebook", "LinkedIn", "YouTube")
+PLATFORM_STATUS_PROPERTIES = ("X", "Threads", "Instagram", "Facebook", "LinkedIn", "YouTube", "TikTok")
+TIKTOK_ENABLED = (
+    os.getenv("TIKTOK_ENABLED", "true").strip().lower() not in {"0", "false", "no"}
+    and bool(os.getenv("TIKTOK_REFRESH_TOKEN") or os.getenv("TIKTOK_ACCESS_TOKEN"))
+)
 DEFAULT_AD_ANALYSIS_SPREADSHEET_ID = "15mskJs84UE7-CUtwELlCnjw3_DoWpAIYnZUvqiJvrdc"
 DEFAULT_AD_ANALYSIS_MASTER_SHEET = "広告分析マスターDB"
 DEFAULT_TODAY_AD_DB_SHEET = "今日の広告DB"
 NOTION_DATE_PROPERTY = "日付"
+NOTION_READY_PROPERTY = os.getenv("NOTION_READY_PROPERTY") or "選択"
+NOTION_READY_VALUE = os.getenv("NOTION_READY_VALUE") or "済み"
 
 
 @dataclass
@@ -115,6 +125,26 @@ def now_jst() -> datetime:
     from zoneinfo import ZoneInfo
 
     return datetime.now(ZoneInfo(JST_TZ))
+
+
+def iso_date_jst(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        from zoneinfo import ZoneInfo
+
+        return parsed.astimezone(ZoneInfo(JST_TZ)).strftime("%Y-%m-%d")
+    except ValueError:
+        return text[:10]
+
+
+def state_created_today(state: Dict[str, Any]) -> bool:
+    state_date = str(state.get("planned_date") or "").strip() or iso_date_jst(state.get("created_at") or state.get("completed_at"))
+    return state_date == now_jst().strftime("%Y-%m-%d")
 
 
 def load_environment() -> None:
@@ -158,6 +188,18 @@ def page_date_sort_value(page: Dict[str, Any]) -> str:
     if isinstance(value, dict):
         return str(value.get("start") or value.get("end") or "")
     return ""
+
+
+def page_ready_value(page: Dict[str, Any]) -> str:
+    prop = page.get("properties", {}).get(NOTION_READY_PROPERTY, {})
+    value = property_plain_value(prop) if prop else ""
+    if isinstance(value, str):
+        return value
+    return ""
+
+
+def page_is_approved_for_posting(page: Dict[str, Any]) -> bool:
+    return page_ready_value(page) == NOTION_READY_VALUE
 
 
 def database_properties(config: Dict[str, str]) -> Dict[str, Any]:
@@ -254,6 +296,8 @@ def platform_property_for_task(task: Dict[str, Any]) -> Optional[str]:
         return "LinkedIn"
     if platform == "youtube":
         return "YouTube"
+    if platform == "tiktok":
+        return "TikTok"
     return None
 
 
@@ -274,6 +318,19 @@ def update_task_platform_status(state: Dict[str, Any], task: Dict[str, Any], sta
     if not page_id or not platform_property:
         return
     update_notion_platform_status(page_id, platform_property, status)
+
+
+def planned_page_still_approved(state: Dict[str, Any]) -> bool:
+    page_id = state.get("page_id")
+    if not page_id:
+        return False
+    try:
+        config = load_notion_config()
+        page = request_notion("GET", f"/pages/{str(page_id).replace('-', '')}", config)
+        return page_is_approved_for_posting(page)
+    except Exception as error:
+        print(f"Notion投稿許可の再確認に失敗したため投稿を止めます: {error}", file=sys.stderr)
+        return False
 
 
 def refresh_completed_platform_statuses(state: Dict[str, Any]) -> None:
@@ -298,6 +355,15 @@ def oldest_page_by_status(statuses: Sequence[str]) -> Optional[Dict[str, Any]]:
 def pages_by_status(statuses: Sequence[str], page_size: int = 20) -> List[Dict[str, Any]]:
     config = load_notion_config()
     db_props = database_properties(config)
+    ready_prop = db_props.get(NOTION_READY_PROPERTY)
+    if not ready_prop or ready_prop.get("type") not in {"select", "status"}:
+        print(
+            f"Notion投稿許可プロパティ {NOTION_READY_PROPERTY} が見つからないため、投稿対象を取得しません。",
+            file=sys.stderr,
+        )
+        return []
+    ready_filter_type = "select" if ready_prop.get("type") == "select" else "status"
+    ready_filter = {"property": NOTION_READY_PROPERTY, ready_filter_type: {"equals": NOTION_READY_VALUE}}
     status_targets = resolve_status_targets(db_props)
     matched_pages: List[Dict[str, Any]] = []
     seen_page_ids: set[str] = set()
@@ -312,7 +378,8 @@ def pages_by_status(statuses: Sequence[str], page_size: int = 20) -> List[Dict[s
             filters.append({"property": status_name, status_filter_type: {"equals": value}})
         if not filters:
             continue
-        filter_data = filters[0] if len(filters) == 1 else {"or": filters}
+        status_filter = filters[0] if len(filters) == 1 else {"or": filters}
+        filter_data = {"and": [status_filter, ready_filter]}
         sorts = (
             [{"property": NOTION_DATE_PROPERTY, "direction": "ascending"}]
             if db_props.get(NOTION_DATE_PROPERTY, {}).get("type") == "date"
@@ -671,7 +738,7 @@ def is_meaningful_post_text(text: str) -> bool:
 
 def task_is_meaningful(task: Dict[str, Any]) -> bool:
     kind = str(task.get("kind") or "")
-    if kind in {"reel", "youtube"}:
+    if kind in {"reel", "youtube", "tiktok"}:
         text = str(task.get("caption") or task.get("description") or task.get("title") or "")
         return "勝ち広告を分析してみましたvol." in text
     return is_meaningful_post_text(task.get("text") or task.get("caption") or task.get("description") or "")
@@ -679,6 +746,18 @@ def task_is_meaningful(task: Dict[str, Any]) -> bool:
 
 def state_has_meaningful_pending_tasks(state: Dict[str, Any]) -> bool:
     return any(task.get("status") != "posted" and task_is_meaningful(task) for task in state.get("tasks", []))
+
+
+def state_within_daily_post_limit(state: Dict[str, Any]) -> bool:
+    sections = state.get("sections") or []
+    if sections and len(sections) > DAILY_MAX_POST_SECTIONS:
+        return False
+    section_numbers = {
+        str(task.get("section_number") or "")
+        for task in state.get("tasks", [])
+        if task.get("status") != "posted" and task_is_meaningful(task) and task.get("section_number")
+    }
+    return len(section_numbers) <= DAILY_MAX_POST_SECTIONS
 
 
 def section_ready(section: AdSection) -> bool:
@@ -943,11 +1022,16 @@ def copy_public(path: Path, relative_path: Path) -> str:
 def create_plan(run_now: bool = False) -> Dict[str, Any]:
     cleanup_generated_assets()
     existing_state = load_state()
+    if existing_state and existing_state.get("status") == "completed" and state_created_today(existing_state):
+        existing_state["message"] = "本日分のNotionページは処理済みです。次の済みページは翌日の5:00以降に処理します。"
+        save_state(existing_state)
+        return existing_state
     if (
         existing_state
         and existing_state.get("status") == "planned"
         and existing_state.get("page_id")
         and state_has_meaningful_pending_tasks(existing_state)
+        and state_within_daily_post_limit(existing_state)
     ):
         existing_state["status"] = "planned"
         save_state(existing_state)
@@ -976,7 +1060,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                 section
                 for section in sections
                 if section.number in ready_numbers
-            ]
+            ][:DAILY_MAX_POST_SECTIONS]
             break
         skipped_not_ready.append(get_page_title(page))
     if not selected_page:
@@ -998,8 +1082,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
 
     asset_prefix = Path("runs") / run_id
     tasks: List[Dict[str, Any]] = []
-    posting_slots = ["now"] * len(sections) if run_now else distribute(sections, SLOTS)
-    text_slots = posting_slots
+    text_slots = ["now"] * len(sections) if run_now else distribute(sections, TEXT_SLOTS)
     text_offsets = [0] * len(sections) if run_now else offset_minutes_by_slot(text_slots)
     for section, slot, offset_minutes in zip(sections, text_slots, text_offsets):
         text = text_post_for(section)
@@ -1014,6 +1097,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "id": f"{platform}-{section.number}",
                     "kind": "text",
                     "platform": platform,
+                    "section_number": section.number,
                     "slot": slot,
                     "slot_offset_minutes": offset_minutes,
                     "text": text_for_platform(platform, text),
@@ -1024,7 +1108,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
             )
 
     content_chunks = [[section] for section in sections]
-    media_slots = posting_slots
+    media_slots = ["now"] * len(sections) if run_now else distribute(sections, MEDIA_SLOTS)
     for chunk_index, (chunk, slot) in enumerate(zip(content_chunks, media_slots), start=1):
         carousel = render_carousel_chunk(chunk, work_dir / f"carousel_{chunk_index:02d}")
         section = chunk[0]
@@ -1059,6 +1143,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "id": f"instagram-carousel-{chunk_index}",
                     "kind": "carousel",
                     "platform": "instagram",
+                    "section_number": section.number,
                     "slot": slot,
                     "caption": carousel_caption,
                     "image_urls": slide_urls,
@@ -1069,6 +1154,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "id": f"linkedin-carousel-{chunk_index}",
                     "kind": "linkedin_pdf",
                     "platform": "linkedin",
+                    "section_number": section.number,
                     "slot": slot,
                     "caption": carousel_caption,
                     "title": CAROUSEL_CAPTION,
@@ -1080,6 +1166,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "id": f"instagram-reel-{chunk_index}",
                     "kind": "reel",
                     "platform": "instagram",
+                    "section_number": section.number,
                     "slot": slot,
                     "caption": video_caption,
                     "video_url": reel_url,
@@ -1089,6 +1176,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "id": f"youtube-short-{chunk_index}",
                     "kind": "youtube",
                     "platform": "youtube",
+                    "section_number": section.number,
                     "slot": slot,
                     "title": f"勝ち広告を分析してみましたvol.{section.number} #Shorts",
                     "description": video_caption,
@@ -1102,6 +1190,20 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                 },
             ]
         )
+        if TIKTOK_ENABLED:
+            tasks.append(
+                {
+                    "id": f"tiktok-video-{chunk_index}",
+                    "kind": "tiktok",
+                    "platform": "tiktok",
+                    "section_number": section.number,
+                    "slot": slot,
+                    "caption": video_caption,
+                    "video_path": str(reel_path),
+                    "video_url": reel_url,
+                    "status": "pending",
+                }
+            )
 
     state = {
         "status": "planned",
@@ -1109,6 +1211,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
         "page_url": page.get("url"),
         "title": get_page_title(page),
         "run_id": run_id,
+        "planned_date": now_jst().strftime("%Y-%m-%d"),
         "created_at": now_jst().isoformat(),
         "sections": [
             {
@@ -1237,7 +1340,7 @@ def create_x_post(text: str, image_url: Optional[str], image_path: Optional[str]
 def execute_task(task: Dict[str, Any]) -> str:
     kind = task["kind"]
     platform = task.get("platform")
-    if platform in {"threads", "instagram", "facebook", "linkedin", "youtube"}:
+    if platform in {"threads", "instagram", "facebook", "linkedin", "youtube", "tiktok"}:
         ensure_token_fresh(platform, strict=False)
     if kind == "text":
         text = task["text"]
@@ -1284,6 +1387,15 @@ def execute_task(task: Dict[str, Any]) -> str:
             ["広告", "マーケティング", "Shorts"],
             thumbnail_path=thumbnail_path if thumbnail_path and thumbnail_path.exists() else None,
         )
+    if kind == "tiktok":
+        video_path = Path(task["video_path"])
+        if not video_path.exists():
+            video_url = task["video_url"]
+            response = requests.get(video_url, timeout=120)
+            response.raise_for_status()
+            video_path.parent.mkdir(parents=True, exist_ok=True)
+            video_path.write_bytes(response.content)
+        return upload_tiktok_video(video_path, task["caption"])
     raise RuntimeError(f"未対応タスクです: {task}")
 
 
@@ -1530,7 +1642,19 @@ def execute_due(slot: str, run_now: bool = False) -> Dict[str, Any]:
     state = load_state()
     if not state or state.get("status") == "idle":
         state = create_plan(run_now=run_now)
+    if state.get("status") == "completed":
+        return state
     if state.get("status") == "idle":
+        return state
+    if not planned_page_still_approved(state):
+        state["status"] = "idle"
+        state["message"] = f"Notionの{NOTION_READY_PROPERTY}が{NOTION_READY_VALUE}ではないため投稿を停止しました。"
+        save_state(state)
+        return state
+    if not state_within_daily_post_limit(state):
+        state["status"] = "idle"
+        state["message"] = f"投稿計画が1日上限{DAILY_MAX_POST_SECTIONS}本を超えているため停止しました。"
+        save_state(state)
         return state
 
     errors: List[str] = []
@@ -1573,7 +1697,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Notion広告分析ページをSNSへ完全自動投稿します。")
     parser.add_argument("--prepare", action="store_true", help="最古の未投稿ページを取得し、アセットと投稿計画を作成します。")
     parser.add_argument("--execute", action="store_true", help="指定スロットの投稿を実行します。")
-    parser.add_argument("--slot", default=os.getenv("POST_SLOT", "now"), help="16:00 / 20:30 / now")
+    parser.add_argument("--slot", default=os.getenv("POST_SLOT", "now"), help="12:00 / 16:00 / 18:00 / 20:30 / now")
     parser.add_argument("--run-now", action="store_true", help="テスト用に全タスクを即時実行します。")
     return parser.parse_args()
 

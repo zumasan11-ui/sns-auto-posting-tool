@@ -140,6 +140,11 @@ def create_database_page(
     return request_notion("POST", "/pages", config, payload)
 
 
+def append_block_children(config: Dict[str, str], block_id: str, children: List[Dict[str, Any]]) -> Dict[str, Any]:
+    payload = {"children": children}
+    return request_notion("PATCH", f"/blocks/{normalize_notion_id(block_id)}/children", config, payload)
+
+
 def update_page(
     config: Dict[str, str],
     page_id: str,

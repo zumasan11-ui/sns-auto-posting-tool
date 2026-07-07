@@ -15,6 +15,7 @@ META_GRAPH_BASE_URL = "https://graph.facebook.com/v23.0"
 THREADS_GRAPH_BASE_URL = "https://graph.threads.net"
 LINKEDIN_TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 YOUTUBE_SCOPES = ("https://www.googleapis.com/auth/youtube.upload",)
+TIKTOK_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
 REFRESH_MARGIN = timedelta(days=7)
 
 
@@ -322,12 +323,52 @@ def refresh_youtube(force: bool = False) -> Dict[str, Any]:
     return {"service": "youtube", "status": "refreshed"}
 
 
+def refresh_tiktok(force: bool = False) -> Dict[str, Any]:
+    load_env()
+    if not should_refresh("TIKTOK_ACCESS_TOKEN_EXPIRES_AT", force):
+        return {"service": "tiktok", "status": "skipped"}
+
+    values = require_values("TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET", "TIKTOK_REFRESH_TOKEN")
+    data = request_json(
+        "POST",
+        TIKTOK_TOKEN_URL,
+        data={
+            "client_key": values["TIKTOK_CLIENT_KEY"],
+            "client_secret": values["TIKTOK_CLIENT_SECRET"],
+            "grant_type": "refresh_token",
+            "refresh_token": values["TIKTOK_REFRESH_TOKEN"],
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded", "Cache-Control": "no-cache"},
+    )
+    access_token = str(data.get("access_token", "")).strip()
+    refresh_token = str(data.get("refresh_token", "")).strip()
+    if not access_token:
+        raise ReauthRequired(f"TikTok token refreshレスポンスが不正です: {data}")
+    updates = {
+        "TIKTOK_ACCESS_TOKEN": access_token,
+        "TIKTOK_LAST_REFRESHED_AT": now_iso(),
+    }
+    if refresh_token:
+        updates["TIKTOK_REFRESH_TOKEN"] = refresh_token
+    if data.get("open_id"):
+        updates["TIKTOK_OPEN_ID"] = str(data["open_id"])
+    if data.get("scope"):
+        updates["TIKTOK_SCOPE"] = str(data["scope"])
+    if data.get("expires_in"):
+        updates["TIKTOK_ACCESS_TOKEN_EXPIRES_AT"] = iso_at(int(data["expires_in"]))
+    if data.get("refresh_expires_in"):
+        updates["TIKTOK_REFRESH_TOKEN_EXPIRES_AT"] = iso_at(int(data["refresh_expires_in"]))
+    save_env_values({key: value for key, value in updates.items() if value})
+    return {"service": "tiktok", "status": "refreshed", "expires_in": data.get("expires_in")}
+
+
 REFRESHERS = {
     "threads": refresh_threads,
     "instagram": refresh_instagram,
     "facebook": refresh_facebook,
     "linkedin": refresh_linkedin,
     "youtube": refresh_youtube,
+    "tiktok": refresh_tiktok,
 }
 
 
@@ -359,6 +400,7 @@ def token_status(service: str) -> Dict[str, Any]:
         "facebook": ("FACEBOOK_PAGE_ACCESS_TOKEN", "FACEBOOK_PAGE_ACCESS_TOKEN_EXPIRES_AT"),
         "linkedin": ("LINKEDIN_ACCESS_TOKEN", "LINKEDIN_ACCESS_TOKEN_EXPIRES_AT"),
         "youtube": ("YOUTUBE_REFRESH_TOKEN", "YOUTUBE_ACCESS_TOKEN_EXPIRES_AT"),
+        "tiktok": ("TIKTOK_REFRESH_TOKEN", "TIKTOK_ACCESS_TOKEN_EXPIRES_AT"),
     }[service]
     expires_at = parse_expires_at(env_value(keys[1]))
     return {
@@ -373,7 +415,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="SNSアクセストークンを更新し、.envへ保存します。")
     parser.add_argument(
         "service",
-        choices=("all", "status", "threads", "instagram", "facebook", "linkedin", "youtube"),
+        choices=("all", "status", "threads", "instagram", "facebook", "linkedin", "youtube", "tiktok"),
         help="更新対象。status は期限情報だけ表示します。",
     )
     parser.add_argument("--force", action="store_true", help="期限に関係なく更新します。")

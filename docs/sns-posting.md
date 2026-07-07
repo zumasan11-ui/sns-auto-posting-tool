@@ -107,7 +107,7 @@ python carousel_poster.py instagram \
 
 キャプション:
 
-- 日次自動投稿では動画系として `勝ち広告を分析してみました` から始まる既存キャプションを使う
+- 日次自動投稿では動画系として `勝ち広告を分析してみましたvol.{投稿番号}` から始まるキャプションを使う
 
 コマンド:
 
@@ -209,6 +209,10 @@ python main.py --platform youtube \
 - `https://www.youtube.com/shorts/...`
 
 日次自動投稿では、Reels/Shorts生成時の `thumbnail.png` をYouTube Shortsのカスタムサムネとして自動設定します。Shorts処理後の反映漏れを避けるため、アップロード直後、45秒後、180秒後に同じサムネを再設定します。Instagram Reelsは動画先頭1.5秒の表紙をサムネ/プレビューとして使い、`share_to_feed=false` でフィードへは共有しません。Instagramフィード面はカルーセル投稿だけにします。
+
+## TikTok投稿
+
+TikTokはContent Posting APIのDirect Postを使い、Instagram Reels/YouTube Shorts用に生成済みの同じ `reel.mp4` を投稿します。動画生成は追加しません。未監査クライアントの投稿はTikTok側でprivate表示に制限されるため、公開投稿まで自動化するにはDeveloper PortalでDirect Postと `video.publish` の審査が必要です。
 
 Facebook個人アカウントはAPI自動投稿対象外です。Reels生成時に同じ動画とコピペ用キャプションを保存します。Macローカル実行時はFinderで見つけやすい `~/Desktop/Facebook個人投稿用/`、GitHub Actions実行時は `deliverables/facebook_manual/` へ保存します。`latest` ファイルは作りません。
 

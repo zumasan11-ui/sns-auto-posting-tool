@@ -18,8 +18,16 @@ on:
         type: choice
         options:
           - "now"
+          - "12:00"
           - "16:00"
+          - "18:00"
           - "20:30"
+  schedule:
+    - cron: "0 20 * * *" # JST 05:00 prepare
+    - cron: "0 3 * * *" # JST 12:00 text posts
+    - cron: "0 7 * * *" # JST 16:00
+    - cron: "0 9 * * *" # JST 18:00 text posts
+    - cron: "30 11 * * *" # JST 20:30
 
 permissions:
   contents: write
@@ -84,6 +92,21 @@ jobs:
       YOUTUBE_ACCESS_TOKEN: ${{ secrets.YOUTUBE_ACCESS_TOKEN }}
       YOUTUBE_ACCESS_TOKEN_EXPIRES_AT: ${{ secrets.YOUTUBE_ACCESS_TOKEN_EXPIRES_AT }}
       YOUTUBE_LAST_REFRESHED_AT: ${{ secrets.YOUTUBE_LAST_REFRESHED_AT }}
+      TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+      TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+      TIKTOK_REDIRECT_URI: ${{ secrets.TIKTOK_REDIRECT_URI }}
+      TIKTOK_SCOPES: ${{ secrets.TIKTOK_SCOPES }}
+      TIKTOK_ACCESS_TOKEN: ${{ secrets.TIKTOK_ACCESS_TOKEN }}
+      TIKTOK_ACCESS_TOKEN_EXPIRES_AT: ${{ secrets.TIKTOK_ACCESS_TOKEN_EXPIRES_AT }}
+      TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
+      TIKTOK_REFRESH_TOKEN_EXPIRES_AT: ${{ secrets.TIKTOK_REFRESH_TOKEN_EXPIRES_AT }}
+      TIKTOK_OPEN_ID: ${{ secrets.TIKTOK_OPEN_ID }}
+      TIKTOK_SCOPE: ${{ secrets.TIKTOK_SCOPE }}
+      TIKTOK_LAST_REFRESHED_AT: ${{ secrets.TIKTOK_LAST_REFRESHED_AT }}
+      TIKTOK_EXPECTED_USERNAME: ${{ secrets.TIKTOK_EXPECTED_USERNAME }}
+      TIKTOK_AUTHORIZED_USERNAME: ${{ secrets.TIKTOK_AUTHORIZED_USERNAME }}
+      TIKTOK_PRIVACY_LEVEL: ${{ secrets.TIKTOK_PRIVACY_LEVEL }}
+      TIKTOK_ENABLED: ${{ secrets.TIKTOK_ENABLED }}
       NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
       NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
       NOTION_VERSION: ${{ secrets.NOTION_VERSION }}
@@ -92,6 +115,8 @@ jobs:
       GOOGLE_SHEETS_CREDENTIALS_JSON: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}
       NOTION_STATUS_PROPERTY: ${{ secrets.NOTION_STATUS_PROPERTY }}
       NOTION_ERROR_PROPERTY: ${{ secrets.NOTION_ERROR_PROPERTY }}
+      NOTION_READY_PROPERTY: ${{ secrets.NOTION_READY_PROPERTY }}
+      NOTION_READY_VALUE: ${{ secrets.NOTION_READY_VALUE }}
       NOTION_DAILY_AD_PAGE_INITIAL_STATUS: ${{ secrets.NOTION_DAILY_AD_PAGE_INITIAL_STATUS }}
       DAILY_AD_ANALYSIS_COUNT: ${{ secrets.DAILY_AD_ANALYSIS_COUNT }}
       AD_ANALYSIS_SPREADSHEET_ID: ${{ secrets.AD_ANALYSIS_SPREADSHEET_ID }}
@@ -141,9 +166,15 @@ jobs:
               "LINKEDIN_REFRESH_TOKEN_EXPIRES_AT", "LINKEDIN_LAST_REFRESHED_AT", "LINKEDIN_PERSON_URN",
               "YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REDIRECT_URI", "YOUTUBE_REFRESH_TOKEN",
               "YOUTUBE_ACCESS_TOKEN", "YOUTUBE_ACCESS_TOKEN_EXPIRES_AT", "YOUTUBE_LAST_REFRESHED_AT",
+              "TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET", "TIKTOK_REDIRECT_URI", "TIKTOK_SCOPES",
+              "TIKTOK_ACCESS_TOKEN", "TIKTOK_ACCESS_TOKEN_EXPIRES_AT", "TIKTOK_REFRESH_TOKEN",
+              "TIKTOK_REFRESH_TOKEN_EXPIRES_AT", "TIKTOK_OPEN_ID", "TIKTOK_SCOPE",
+              "TIKTOK_LAST_REFRESHED_AT", "TIKTOK_EXPECTED_USERNAME", "TIKTOK_AUTHORIZED_USERNAME",
+              "TIKTOK_PRIVACY_LEVEL", "TIKTOK_ENABLED",
               "NOTION_TOKEN", "NOTION_DATABASE_ID", "NOTION_VERSION",
               "GOOGLE_SHEETS_SPREADSHEET_ID", "GOOGLE_SHEETS_DEFAULT_SHEET",
               "NOTION_STATUS_PROPERTY", "NOTION_ERROR_PROPERTY",
+              "NOTION_READY_PROPERTY", "NOTION_READY_VALUE",
               "NOTION_DAILY_AD_PAGE_INITIAL_STATUS", "DAILY_AD_ANALYSIS_COUNT",
               "AD_ANALYSIS_SPREADSHEET_ID", "AD_ANALYSIS_MASTER_SHEET", "TODAY_AD_DB_SHEET",
           ]
@@ -177,6 +208,12 @@ jobs:
           elif [ "${{ github.event.schedule }}" = "0 7 * * *" ]; then
             echo "run_now=false" >> "$GITHUB_OUTPUT"
             echo "slot=16:00" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 3 * * *" ]; then
+            echo "run_now=false" >> "$GITHUB_OUTPUT"
+            echo "slot=12:00" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 9 * * *" ]; then
+            echo "run_now=false" >> "$GITHUB_OUTPUT"
+            echo "slot=18:00" >> "$GITHUB_OUTPUT"
           else
             echo "run_now=false" >> "$GITHUB_OUTPUT"
             echo "slot=20:30" >> "$GITHUB_OUTPUT"
