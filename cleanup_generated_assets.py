@@ -1,5 +1,6 @@
 import argparse
 import os
+import platform
 import shutil
 import time
 from pathlib import Path
@@ -9,6 +10,14 @@ from typing import Iterable
 DEFAULT_RETENTION_DAYS = int(os.getenv("GENERATED_ASSET_RETENTION_DAYS", "7"))
 AUTO_POST_DIR = Path(os.getenv("AUTO_POST_RUNTIME_DIR", "deliverables/auto_post"))
 FACEBOOK_MANUAL_DIR = Path(os.getenv("FACEBOOK_MANUAL_DIR", "deliverables/facebook_manual"))
+YOUTUBE_COMMUNITY_DIR = Path(
+    os.getenv(
+        "YOUTUBE_COMMUNITY_EXPORT_DIR",
+        str(Path.home() / "Desktop" / "YouTube投稿")
+        if platform.system() == "Darwin" and not os.getenv("CI")
+        else "deliverables/youtube_community",
+    )
+)
 PUBLIC_RUNS_DIR = Path(os.getenv("PUBLIC_RUNS_DIR", "public_state/public/runs"))
 PUBLIC_MANUAL_TESTS_DIR = Path(os.getenv("PUBLIC_MANUAL_TESTS_DIR", "public_state/public/manual_tests"))
 
@@ -62,6 +71,7 @@ def cleanup_generated_assets(retention_days: int = DEFAULT_RETENTION_DAYS, *, dr
     cleanup_child_dirs(PUBLIC_RUNS_DIR, cutoff, dry_run=dry_run)
     cleanup_child_dirs(PUBLIC_MANUAL_TESTS_DIR, cutoff, dry_run=dry_run)
     cleanup_files(FACEBOOK_MANUAL_DIR, cutoff, dry_run=dry_run)
+    cleanup_files(YOUTUBE_COMMUNITY_DIR, cutoff, dry_run=dry_run)
 
 
 def parse_args() -> argparse.Namespace:

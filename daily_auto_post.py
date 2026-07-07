@@ -71,6 +71,7 @@ from scripts.prototype_single_ad_post_assets import (
     split_near_periods,
 )
 from token_refresh import ensure_token_fresh
+from youtube_community_export import export_youtube_community_images
 from youtube_poster import upload_youtube_short
 
 
@@ -720,6 +721,12 @@ def text_post_for(section: AdSection) -> str:
     return (text + "\n\n" + "\n".join(source_lines_for([section]))).strip()
 
 
+def youtube_community_post_title(page_title: str, section: AdSection, chunk_index: int) -> str:
+    service = section.service_name or (section.companies[0].split(" / ", 1)[1] if section.companies and " / " in section.companies[0] else "")
+    suffix = service or f"投稿{chunk_index:02d}"
+    return f"{page_title}_vol.{section.number}_{suffix}"
+
+
 def hyperlink_formula(url: str, label: Optional[str] = None) -> str:
     escaped_url = url.replace('"', '""')
     escaped_label = (label or url).replace('"', '""')
@@ -1020,6 +1027,14 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
     media_slots = posting_slots
     for chunk_index, (chunk, slot) in enumerate(zip(content_chunks, media_slots), start=1):
         carousel = render_carousel_chunk(chunk, work_dir / f"carousel_{chunk_index:02d}")
+        section = chunk[0]
+        carousel_caption = section_body_text(section) + "\n\n" + "\n".join(source_lines_for([section]))
+        youtube_community_dir = export_youtube_community_images(
+            carousel["slides"],
+            chunk_index=chunk_index,
+            post_title=youtube_community_post_title(get_page_title(page), section, chunk_index),
+            caption=carousel_caption,
+        )
         slide_urls = [
             copy_public(path, asset_prefix / f"carousel_{chunk_index:02d}" / path.name)
             for path in carousel["slides"]
@@ -1028,9 +1043,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
             slide_urls.append(slide_urls[0])
         pdf_public_url = copy_public(carousel["pdf"], asset_prefix / f"carousel_{chunk_index:02d}" / "linkedin_carousel.pdf")
         reel_path = render_reel_chunk(chunk, work_dir / f"reel_{chunk_index:02d}")
-        section = chunk[0]
         video_caption = video_caption_for(section)
-        carousel_caption = section_body_text(section) + "\n\n" + "\n".join(source_lines_for([section]))
         facebook_manual_paths = export_facebook_manual_video(
             reel_path,
             run_id=run_id,
@@ -1049,6 +1062,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "slot": slot,
                     "caption": carousel_caption,
                     "image_urls": slide_urls,
+                    "youtube_community_dir": str(youtube_community_dir) if youtube_community_dir else "",
                     "status": "pending",
                 },
                 {
