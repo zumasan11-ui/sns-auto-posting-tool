@@ -911,7 +911,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
     existing_state = load_state()
     if (
         existing_state
-        and existing_state.get("status") in ("planned", "error")
+        and existing_state.get("status") == "planned"
         and existing_state.get("page_id")
         and state_has_meaningful_pending_tasks(existing_state)
     ):
@@ -919,7 +919,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
         save_state(existing_state)
         return existing_state
 
-    candidate_pages = pages_by_status(("進行中", "エラー", "未投稿", "未着手"), page_size=20)
+    candidate_pages = pages_by_status(("未投稿", "未着手"), page_size=20)
     if not candidate_pages:
         state = {"status": "idle", "message": "未投稿ページがありません。", "created_at": now_jst().isoformat()}
         save_state(state)
