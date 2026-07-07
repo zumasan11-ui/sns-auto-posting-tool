@@ -3,7 +3,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -24,6 +24,7 @@ TITLE_ENV = "NOTION_DAILY_AD_PAGE_TITLE_PROPERTY"
 INITIAL_STATUS_ENV = "NOTION_DAILY_AD_PAGE_INITIAL_STATUS"
 SCREENSHOT_HEADERS = ("広告スクショ", "広告スクショURL", "スクショURL", "画像URL", "Screenshot URL", "screenshot_url")
 PLATFORM_STATUS_PROPERTIES = ("X", "Threads", "Instagram", "Facebook", "LinkedIn", "YouTube")
+DATE_PROPERTY = "日付"
 
 
 def log(message: str) -> None:
@@ -171,6 +172,13 @@ def title_property_name(database: Dict[str, Any]) -> str:
     raise RuntimeError("Notionデータベースに title プロパティが見つかりません。")
 
 
+def scheduled_date_payload(database: Dict[str, Any], offset_days: int = 0) -> Dict[str, Any]:
+    if database.get("properties", {}).get(DATE_PROPERTY, {}).get("type") != "date":
+        return {}
+    scheduled = date.today() + timedelta(days=offset_days)
+    return {DATE_PROPERTY: {"date": {"start": scheduled.isoformat()}}}
+
+
 def status_payload(database: Dict[str, Any]) -> Dict[str, Any]:
     status_name = os.getenv("NOTION_STATUS_PROPERTY", "Status").strip()
     status_value = os.getenv(INITIAL_STATUS_ENV, "未着手").strip()
@@ -211,6 +219,7 @@ def create_daily_page(ads: List[Dict[str, Any]], dry_run: bool = False) -> Dict[
     properties = {
         title_property_name(database): {"title": [{"text": {"content": title}}]},
         **status_payload(database),
+        **scheduled_date_payload(database),
     }
     children: List[Dict[str, Any]] = []
     for index, ad in enumerate(ads, start=1):

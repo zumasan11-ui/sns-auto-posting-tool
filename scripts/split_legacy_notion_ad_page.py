@@ -27,6 +27,7 @@ from scripts.prepare_daily_ad_analysis_page import (
     chunked,
     image_block,
     paragraph,
+    scheduled_date_payload,
     status_payload,
     title_property_name,
 )
@@ -113,10 +114,17 @@ def ad_blocks_from_extracted(ad: Dict[str, str], number: int) -> List[Dict[str, 
     return blocks
 
 
-def create_split_page(config: Dict[str, str], database: Dict[str, Any], ads: List[Dict[str, str]], title: str) -> Dict[str, Any]:
+def create_split_page(
+    config: Dict[str, str],
+    database: Dict[str, Any],
+    ads: List[Dict[str, str]],
+    title: str,
+    offset_days: int,
+) -> Dict[str, Any]:
     properties = {
         title_property_name(database): {"title": [{"text": {"content": title}}]},
         **status_payload(database),
+        **scheduled_date_payload(database, offset_days),
     }
     page = create_database_page(config, properties=properties)
     children: List[Dict[str, Any]] = []
@@ -155,7 +163,7 @@ def main() -> int:
         if args.dry_run:
             created.append({"dry_run": True, "title": title, "ads": len(chunk)})
         else:
-            created.append(create_split_page(config, database, chunk, title))
+            created.append(create_split_page(config, database, chunk, title, index - 1))
 
     archived = False
     if args.archive_original and not args.dry_run:

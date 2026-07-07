@@ -91,6 +91,7 @@ PLATFORM_STATUS_PROPERTIES = ("X", "Threads", "Instagram", "Facebook", "LinkedIn
 DEFAULT_AD_ANALYSIS_SPREADSHEET_ID = "15mskJs84UE7-CUtwELlCnjw3_DoWpAIYnZUvqiJvrdc"
 DEFAULT_AD_ANALYSIS_MASTER_SHEET = "広告分析マスターDB"
 DEFAULT_TODAY_AD_DB_SHEET = "今日の広告DB"
+NOTION_DATE_PROPERTY = "日付"
 
 
 @dataclass
@@ -148,6 +149,14 @@ def get_page_title(page: Dict[str, Any]) -> str:
             if title:
                 return str(title)
     return "広告分析"
+
+
+def page_date_sort_value(page: Dict[str, Any]) -> str:
+    prop = page.get("properties", {}).get(NOTION_DATE_PROPERTY, {})
+    value = property_plain_value(prop) if prop else None
+    if isinstance(value, dict):
+        return str(value.get("start") or value.get("end") or "")
+    return ""
 
 
 def database_properties(config: Dict[str, str]) -> Dict[str, Any]:
@@ -303,11 +312,16 @@ def pages_by_status(statuses: Sequence[str], page_size: int = 20) -> List[Dict[s
         if not filters:
             continue
         filter_data = filters[0] if len(filters) == 1 else {"or": filters}
+        sorts = (
+            [{"property": NOTION_DATE_PROPERTY, "direction": "ascending"}]
+            if db_props.get(NOTION_DATE_PROPERTY, {}).get("type") == "date"
+            else [{"timestamp": "created_time", "direction": "ascending"}]
+        )
         pages = query_database(
             config,
             page_size=page_size,
             filter_data=filter_data,
-            sorts=[{"timestamp": "created_time", "direction": "ascending"}],
+            sorts=sorts,
         )
         for page in pages:
             page_id = str(page.get("id") or "")
@@ -315,7 +329,14 @@ def pages_by_status(statuses: Sequence[str], page_size: int = 20) -> List[Dict[s
                 continue
             seen_page_ids.add(page_id)
             matched_pages.append(page)
-    return sorted(matched_pages, key=lambda page: (str(page.get("created_time") or ""), get_page_title(page)))
+    return sorted(
+        matched_pages,
+        key=lambda page: (
+            page_date_sort_value(page) or "9999-12-31",
+            str(page.get("created_time") or ""),
+            get_page_title(page),
+        ),
+    )
 
 
 def ensure_state_branch() -> None:
