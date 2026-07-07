@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TikTok OAuth Callback</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+        max-width: 720px;
+        margin: 48px auto;
+        padding: 0 20px;
+        color: #172033;
+      }
+      code,
+      textarea {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      textarea {
+        width: 100%;
+        min-height: 96px;
+        box-sizing: border-box;
+        margin: 12px 0;
+        padding: 12px;
+      }
+      button {
+        padding: 10px 16px;
+        border: 0;
+        border-radius: 8px;
+        background: #111827;
+        color: white;
+        cursor: pointer;
+      }
+      .muted {
+        color: #667085;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>TikTok OAuth Callback</h1>
+    <p>この画面の <code>code</code> をコピーして、<code>python tiktok_oauth.py --code "..."</code> に渡してください。</p>
+    <textarea id="code" readonly></textarea>
+    <button id="copy">codeをコピー</button>
+    <p class="muted" id="status"></p>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code") || "";
+      const error = params.get("error") || "";
+      const box = document.getElementById("code");
+      const status = document.getElementById("status");
+      box.value = code || error || "code が見つかりません。Redirect URIとTikTokの許可画面を確認してください。";
+      status.textContent = code ? "codeを取得しました。" : "codeを取得できませんでした。";
+      document.getElementById("copy").addEventListener("click", async () => {
+        await navigator.clipboard.writeText(box.value);
+        status.textContent = "コピーしました。";
+      });
+    </script>
+  </body>
+</html>
