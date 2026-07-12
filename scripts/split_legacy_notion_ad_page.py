@@ -18,16 +18,19 @@ from notion_api import (
     append_block_children,
     create_database_page,
     load_notion_config,
+    query_database,
     retrieve_block_children,
     retrieve_database,
     update_page,
 )
 from scripts.prepare_daily_ad_analysis_page import (
     ad_caption_items,
+    ad_metadata_body_blocks,
     chunked,
     image_block,
     paragraph,
     scheduled_date_payload,
+    next_available_scheduled_date,
     status_payload,
     title_property_name,
 )
@@ -92,6 +95,22 @@ def extract_ads_from_legacy_page(blocks: List[Dict[str, Any]]) -> List[Dict[str,
     return ads
 
 
+def page_status_values(page: Dict[str, Any]) -> List[str]:
+    values: List[str] = []
+    for prop in page.get("properties", {}).values():
+        prop_type = prop.get("type")
+        if prop_type in ("status", "select"):
+            value = (prop.get(prop_type) or {}).get("name", "")
+            if value:
+                values.append(value)
+    return values
+
+
+def page_is_completed(page: Dict[str, Any]) -> bool:
+    statuses = page_status_values(page)
+    return bool(statuses) and all(status == "完了" for status in statuses)
+
+
 def ad_blocks_from_extracted(ad: Dict[str, str], number: int) -> List[Dict[str, Any]]:
     blocks: List[Dict[str, Any]] = [paragraph(f"{number}.")]
     image = image_block(
@@ -107,7 +126,13 @@ def ad_blocks_from_extracted(ad: Dict[str, str], number: int) -> List[Dict[str, 
     )
     if image:
         blocks.append(image)
-    blocks.append(paragraph("訴求の型："))
+    blocks.extend(
+        ad_metadata_body_blocks(
+            ad.get("会社名", ""),
+            ad.get("サービス名", ""),
+            ad.get("掲載期間", ""),
+        )
+    )
     blocks.append(paragraph(""))
     blocks.append(paragraph(""))
     blocks.append(paragraph(""))
@@ -119,12 +144,13 @@ def create_split_page(
     database: Dict[str, Any],
     ads: List[Dict[str, str]],
     title: str,
+    scheduled_start,
     offset_days: int,
 ) -> Dict[str, Any]:
     properties = {
         title_property_name(database): {"title": [{"text": {"content": title}}]},
         **status_payload(database),
-        **scheduled_date_payload(database, offset_days),
+        **scheduled_date_payload(database, offset_days, scheduled_start),
     }
     page = create_database_page(config, properties=properties)
     children: List[Dict[str, Any]] = []
@@ -139,38 +165,55 @@ def create_split_page(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="旧8広告Notionページを2広告ずつの新規ページへ分割します。")
-    parser.add_argument("--page-id", required=True)
-    parser.add_argument("--chunk-size", type=int, default=2)
+    parser = argparse.ArgumentParser(description="複数広告入りNotionページを指定件数ずつの新規ページへ分割します。")
+    parser.add_argument("--page-id")
+    parser.add_argument("--all", action="store_true", help="データベース内の複数広告ページをまとめて分割します。")
+    parser.add_argument("--chunk-size", type=int, default=1)
+    parser.add_argument("--include-completed", action="store_true", help="完了済みページも分割対象に含めます。")
     parser.add_argument("--archive-original", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
+    if not args.page_id and not args.all:
+        raise RuntimeError("--page-id または --all を指定してください。")
 
     load_dotenv(dotenv_path=".env", override=True)
     config = load_notion_config()
     database = retrieve_database(config)
-    blocks = retrieve_block_children(config, args.page_id)
-    ads = extract_ads_from_legacy_page(blocks)
-    if not ads:
-        raise RuntimeError("分割できる広告画像ブロックが見つかりません。")
-
-    created: List[Dict[str, Any]] = []
+    scheduled_start = next_available_scheduled_date(config, database)
+    pages = [{"id": args.page_id, "properties": {}}] if args.page_id else query_database(config, page_size=100, fetch_all=True)
+    results: List[Dict[str, Any]] = []
     now = datetime.now()
-    for index, start in enumerate(range(0, len(ads), args.chunk_size), start=1):
-        chunk = ads[start : start + args.chunk_size]
-        title_time = (now + timedelta(minutes=index - 1)).strftime("%Y-%m-%d %H:%M")
-        title = f"{title_time} 広告分析 {index}/{(len(ads) + args.chunk_size - 1) // args.chunk_size}"
-        if args.dry_run:
-            created.append({"dry_run": True, "title": title, "ads": len(chunk)})
-        else:
-            created.append(create_split_page(config, database, chunk, title, index - 1))
+    page_sequence = 0
+    for page in pages:
+        page_id = page["id"]
+        if page_is_completed(page) and not args.include_completed:
+            results.append({"page_id": page_id, "created": [], "archived_original": False, "skipped": True, "reason": "completed"})
+            continue
+        blocks = retrieve_block_children(config, page_id)
+        ads = extract_ads_from_legacy_page(blocks)
+        if len(ads) <= args.chunk_size:
+            results.append({"page_id": page_id, "source_ads": len(ads), "created": [], "archived_original": False, "skipped": True})
+            continue
 
-    archived = False
-    if args.archive_original and not args.dry_run:
-        update_page(config, args.page_id, archived=True)
-        archived = True
+        created: List[Dict[str, Any]] = []
+        total_chunks = (len(ads) + args.chunk_size - 1) // args.chunk_size
+        for index, start in enumerate(range(0, len(ads), args.chunk_size), start=1):
+            page_sequence += 1
+            chunk = ads[start : start + args.chunk_size]
+            title_time = (now + timedelta(minutes=page_sequence - 1)).strftime("%Y-%m-%d %H:%M")
+            title = clean(chunk[0].get("サービス名")) or f"{title_time} 広告分析 {index}/{total_chunks}"
+            if args.dry_run:
+                created.append({"dry_run": True, "title": title, "ads": len(chunk)})
+            else:
+                created.append(create_split_page(config, database, chunk, title, scheduled_start, page_sequence - 1))
 
-    print({"source_ads": len(ads), "created": created, "archived_original": archived})
+        archived = False
+        if args.archive_original and not args.dry_run:
+            update_page(config, page_id, archived=True)
+            archived = True
+        results.append({"page_id": page_id, "source_ads": len(ads), "created": created, "archived_original": archived})
+
+    print({"pages": results})
     return 0
 
 

@@ -13,13 +13,13 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from notion_api import append_block_children, create_database_page, load_notion_config, retrieve_database
+from notion_api import append_block_children, create_database_page, load_notion_config, query_database, retrieve_database
 from sheets_api import build_sheets_service, load_sheets_config, read_values, update_values
 
 
 DEFAULT_SHEET = "今日の広告DB"
 DEFAULT_SPREADSHEET_ID = "15mskJs84UE7-CUtwELlCnjw3_DoWpAIYnZUvqiJvrdc"
-DEFAULT_AD_COUNT = 2
+DEFAULT_AD_COUNT = 1
 TITLE_ENV = "NOTION_DAILY_AD_PAGE_TITLE_PROPERTY"
 INITIAL_STATUS_ENV = "NOTION_DAILY_AD_PAGE_INITIAL_STATUS"
 SCREENSHOT_HEADERS = ("広告スクショ", "広告スクショURL", "スクショURL", "画像URL", "Screenshot URL", "screenshot_url")
@@ -124,16 +124,30 @@ def image_block(url: str, caption_items: List[Dict[str, Any]]) -> Optional[Dict[
 
 
 def ad_caption_items(company: str, service: str, genre: str, sub_genre: str, period: str, ad_url: str) -> List[Dict[str, Any]]:
-    lines = [f"{company} / {service}".strip(" /")]
+    lines = []
     if genre or sub_genre:
         lines.append(" / ".join(part for part in (genre, sub_genre) if part))
-    if period:
-        lines.append(f"掲載期間：{period}")
     items = [rich_text_item("\n".join(line for line in lines if line))]
     if ad_url:
         items.append(rich_text_item("\n広告URL："))
         items.append(rich_text_item(ad_url, ad_url))
     return items
+
+
+def ad_metadata_body_blocks(company: str, service: str, period: str) -> List[Dict[str, Any]]:
+    return [
+        paragraph(""),
+        paragraph(
+            "\n".join(
+                [
+                    f"引用元：{company}",
+                    f"掲載期間：{period}",
+                    "",
+                    "訴求の型：",
+                ]
+            )
+        ),
+    ]
 
 
 def ad_blocks(ad: Dict[str, Any], ad_number: int) -> List[Dict[str, Any]]:
@@ -151,7 +165,7 @@ def ad_blocks(ad: Dict[str, Any], ad_number: int) -> List[Dict[str, Any]]:
         blocks.append(image)
     else:
         blocks.append(paragraph("広告スクショ：未登録（スプシに広告スクショURL列があれば自動貼付できます）"))
-    blocks.append(paragraph("訴求の型："))
+    blocks.extend(ad_metadata_body_blocks(company, service, period))
     blocks.append(paragraph(""))
     blocks.append(paragraph(""))
     blocks.append(paragraph(""))
@@ -172,11 +186,32 @@ def title_property_name(database: Dict[str, Any]) -> str:
     raise RuntimeError("Notionデータベースに title プロパティが見つかりません。")
 
 
-def scheduled_date_payload(database: Dict[str, Any], offset_days: int = 0) -> Dict[str, Any]:
+def scheduled_date_payload(database: Dict[str, Any], offset_days: int = 0, start_date: Optional[date] = None) -> Dict[str, Any]:
     if database.get("properties", {}).get(DATE_PROPERTY, {}).get("type") != "date":
         return {}
-    scheduled = date.today() + timedelta(days=offset_days)
+    scheduled = (start_date or date.today()) + timedelta(days=offset_days)
     return {DATE_PROPERTY: {"date": {"start": scheduled.isoformat()}}}
+
+
+def page_date(page: Dict[str, Any]) -> Optional[date]:
+    value = page.get("properties", {}).get(DATE_PROPERTY, {})
+    if value.get("type") != "date":
+        return None
+    start = (value.get("date") or {}).get("start")
+    if not start:
+        return None
+    try:
+        return date.fromisoformat(str(start)[:10])
+    except ValueError:
+        return None
+
+
+def next_available_scheduled_date(config: Dict[str, str], database: Dict[str, Any]) -> date:
+    if database.get("properties", {}).get(DATE_PROPERTY, {}).get("type") != "date":
+        return date.today()
+    dates = [value for value in (page_date(page) for page in query_database(config, page_size=100, fetch_all=True)) if value]
+    latest = max(dates, default=date.today() - timedelta(days=1))
+    return max(latest + timedelta(days=1), date.today())
 
 
 def status_payload(database: Dict[str, Any]) -> Dict[str, Any]:
@@ -214,12 +249,12 @@ def status_payload(database: Dict[str, Any]) -> Dict[str, Any]:
 def create_daily_page(ads: List[Dict[str, Any]], dry_run: bool = False) -> Dict[str, Any]:
     config = load_notion_config()
     database = retrieve_database(config)
-    created_label = datetime.now().strftime("%Y-%m-%d %H:%M")
-    title = f"{created_label} 広告分析"
+    scheduled_start = next_available_scheduled_date(config, database)
+    title = clean(ads[0].get("サービス名")) if ads else datetime.now().strftime("%Y-%m-%d %H:%M 広告分析")
     properties = {
         title_property_name(database): {"title": [{"text": {"content": title}}]},
         **status_payload(database),
-        **scheduled_date_payload(database),
+        **scheduled_date_payload(database, start_date=scheduled_start),
     }
     children: List[Dict[str, Any]] = []
     for index, ad in enumerate(ads, start=1):

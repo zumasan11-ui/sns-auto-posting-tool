@@ -17,17 +17,26 @@
 ## 実行スケジュール
 
 - 日本時間 05:00: Notionの対象ページ取得、Statusを `進行中` へ更新、カルーセル/リール生成、公開アセット作成
-- 日本時間 12:00 / 18:00: X、Threads、Facebookページのテキスト投稿
-- 日本時間 16:00 / 20:30: Instagram、LinkedIn、YouTube、TikTokの画像・動画投稿
+- 日本時間 08:00: LinkedIn
+- 日本時間 12:00: X、Instagramフィード、Facebookページ
+- 日本時間 18:30: TikTok
+- 日本時間 19:00: Instagramリール
+- 日本時間 19:30: YouTubeショート
+- 日本時間 20:00: Threads
 - 手動実行: GitHub Actionsの `Daily SNS Auto Post` から `run_now=true`
 
-GitHub Actionsは長時間待機に向かないため、5:00のジョブで1日の計画を作成し、投稿時刻ごとのcronで続きの処理を行います。計画と公開アセットは `gh-pages` ブランチに保存します。
+GitHub Actionsは長時間待機に向かないため、5:00のジョブで1日の計画を作成し、投稿時刻ごとのcronで続きの処理を行います。計画と公開アセットは `gh-pages` ブランチに保存します。投稿は1日1広告だけで、`状態=済み` の最も古いNotionページを使います。
 
-X、Threads、Facebookページのテキスト投稿は、各スロット内でセクションごとに1分ずつずらします。同じセクションは3媒体へ同じタイミングで投稿し、媒体ごとにはずらしません。
+- 08:00: LinkedIn
+- 12:00: X、Instagramフィード、Facebookページ
+- 18:30: TikTok
+- 19:00: Instagramリール
+- 19:30: YouTubeショート
+- 20:00: Threads
 
 ## 投稿対象
 
-Notionデータベースから `選択` が `済み` になっているページだけを投稿対象にします。その中で `Status` が `未投稿` / `未着手` のページを `日付` の古い順に探します。`済み` ページが複数あっても、1日に処理するのは最も古い1ページだけです。1ページ内でも投稿対象は最大2広告までです。5:00の投稿計画作成時だけでなく、12:00 / 16:00 / 18:00 / 20:30の実投稿直前にも `選択=済み` を再確認し、外れていれば投稿しません。
+Notionデータベースから `状態` が `済み` になっているページだけを投稿対象にします。その中で `Status` が `未投稿` / `未着手` のページを `日付` の古い順に探します。`済み` ページが複数あっても、1日に処理するのは最も古い1ページだけです。Notion日次ページは1ページにつき1広告にします。5:00の投稿計画作成時だけでなく、各実投稿直前にも `状態=済み` を再確認し、外れていれば投稿しません。
 
 ## Secrets運用ルール
 
@@ -54,9 +63,9 @@ Notionデータベースから `選択` が `済み` になっているページ
 - `AD_ANALYSIS_SPREADSHEET_ID`: 広告分析マスターDBのスプレッドシートID
 - `AD_ANALYSIS_MASTER_SHEET`: 既定値 `広告分析マスターDB`
 - `TODAY_AD_DB_SHEET`: 既定値 `今日の広告DB`
-- `DAILY_AD_ANALYSIS_COUNT`: 既定値 `2`
+- `DAILY_AD_ANALYSIS_COUNT`: 既定値 `1`
 - `NOTION_DAILY_AD_PAGE_INITIAL_STATUS`: Notionページ作成時の初期ステータス。既定値 `未着手`
-- `NOTION_READY_PROPERTY`: 投稿許可に使うNotion選択欄。既定値 `選択`
+- `NOTION_READY_PROPERTY`: 投稿許可に使うNotionの状態欄。既定値 `状態`
 - `NOTION_READY_VALUE`: 投稿許可の選択肢。既定値 `済み`
 - `PUBLIC_ASSET_BASE_URL`
 
@@ -170,7 +179,7 @@ Actionsは `.env` をSecretsから組み立てた後、毎回 `python token_refr
 
 - `NOTION_STATUS_PROPERTY`: 既定値 `Status`
 - `NOTION_ERROR_PROPERTY`: 既定値 `エラー内容`
-- `NOTION_READY_PROPERTY`: 既定値 `選択`
+- `NOTION_READY_PROPERTY`: 既定値 `状態`
 - `NOTION_READY_VALUE`: 既定値 `済み`
 
 ## 登録手順

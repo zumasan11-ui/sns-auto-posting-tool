@@ -18,16 +18,20 @@ on:
         type: choice
         options:
           - "now"
+          - "08:00"
           - "12:00"
-          - "16:00"
-          - "18:00"
-          - "20:30"
+          - "18:30"
+          - "19:00"
+          - "19:30"
+          - "20:00"
   schedule:
     - cron: "0 20 * * *" # JST 05:00 prepare
-    - cron: "0 3 * * *" # JST 12:00 text posts
-    - cron: "0 7 * * *" # JST 16:00
-    - cron: "0 9 * * *" # JST 18:00 text posts
-    - cron: "30 11 * * *" # JST 20:30
+    - cron: "0 23 * * *" # JST 08:00 LinkedIn
+    - cron: "0 3 * * *" # JST 12:00 X / Instagram feed / Facebook page
+    - cron: "30 9 * * *" # JST 18:30 TikTok
+    - cron: "0 10 * * *" # JST 19:00 Instagram Reels
+    - cron: "30 10 * * *" # JST 19:30 YouTube Shorts
+    - cron: "0 11 * * *" # JST 20:00 Threads
 
 permissions:
   contents: write
@@ -205,18 +209,24 @@ jobs:
           elif [ "${{ github.event.schedule }}" = "0 20 * * *" ]; then
             echo "run_now=false" >> "$GITHUB_OUTPUT"
             echo "slot=prepare" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event.schedule }}" = "0 7 * * *" ]; then
+          elif [ "${{ github.event.schedule }}" = "0 23 * * *" ]; then
             echo "run_now=false" >> "$GITHUB_OUTPUT"
-            echo "slot=16:00" >> "$GITHUB_OUTPUT"
+            echo "slot=08:00" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "0 3 * * *" ]; then
             echo "run_now=false" >> "$GITHUB_OUTPUT"
             echo "slot=12:00" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event.schedule }}" = "0 9 * * *" ]; then
+          elif [ "${{ github.event.schedule }}" = "30 9 * * *" ]; then
             echo "run_now=false" >> "$GITHUB_OUTPUT"
-            echo "slot=18:00" >> "$GITHUB_OUTPUT"
+            echo "slot=18:30" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 10 * * *" ]; then
+            echo "run_now=false" >> "$GITHUB_OUTPUT"
+            echo "slot=19:00" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "30 10 * * *" ]; then
+            echo "run_now=false" >> "$GITHUB_OUTPUT"
+            echo "slot=19:30" >> "$GITHUB_OUTPUT"
           else
             echo "run_now=false" >> "$GITHUB_OUTPUT"
-            echo "slot=20:30" >> "$GITHUB_OUTPUT"
+            echo "slot=20:00" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Prepare daily assets

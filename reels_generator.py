@@ -1,6 +1,7 @@
 import argparse
 import json
 import math
+import os
 import random
 import re
 import shutil
@@ -41,6 +42,8 @@ REEL_BGM_FALLBACK_DIR = Path("assets/audio/mixkit_fallback")
 REEL_BGM_REMOTE_URL = "https://mixkit.co/free-stock-music/"
 REEL_BGM_REMOTE_TIMEOUT = 12
 REEL_BGM_FILTER = "loudnorm=I=-22:TP=-2.0:LRA=11,volume=0.90"
+REEL_BGM_HISTORY_FILE = Path(os.getenv("AUTO_POST_STATE_DIR", "public_state")) / "state" / "bgm_history.json"
+REEL_BGM_HISTORY_LIMIT = 250
 REEL_THUMBNAIL_FILENAME = "thumbnail.png"
 SOFT_BODY_FONT_PATHS = (
     "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc",
@@ -554,10 +557,109 @@ def parse_mixkit_tracks(html: str) -> List[MixkitTrack]:
     return tracks
 
 
-def fetch_mixkit_tracks() -> List[MixkitTrack]:
-    response = requests.get(REEL_BGM_REMOTE_URL, timeout=REEL_BGM_REMOTE_TIMEOUT)
+def fetch_mixkit_page(path_or_url: str) -> str:
+    if path_or_url.startswith("http"):
+        url = path_or_url
+    else:
+        url = "https://mixkit.co" + path_or_url
+    response = requests.get(url, timeout=REEL_BGM_REMOTE_TIMEOUT)
     response.raise_for_status()
-    return parse_mixkit_tracks(response.text)
+    return response.text
+
+
+def discover_mixkit_music_paths(html: str) -> List[str]:
+    paths = {"/free-stock-music/"}
+    for href in re.findall(r'href="([^"]*free-stock-music/[^"]*)"', html):
+        href = href.split("#", 1)[0].split("?", 1)[0]
+        if href.startswith("https://mixkit.co"):
+            href = href.replace("https://mixkit.co", "", 1)
+        if not href.startswith("/free-stock-music/"):
+            continue
+        if re.search(r"\.(?:mp3|wav|zip|jpg|png|webp)$", href, flags=re.I):
+            continue
+        paths.add(href)
+    return sorted(paths)
+
+
+def fetch_mixkit_tracks() -> List[MixkitTrack]:
+    tracks_by_url: dict[str, MixkitTrack] = {}
+    top_page = fetch_mixkit_page(REEL_BGM_REMOTE_URL)
+    for path in discover_mixkit_music_paths(top_page):
+        try:
+            page = fetch_mixkit_page(path)
+        except requests.RequestException:
+            continue
+        for track in parse_mixkit_tracks(page):
+            tracks_by_url.setdefault(track.url, track)
+    return list(tracks_by_url.values())
+
+
+def fetch_random_mixkit_tracks() -> List[MixkitTrack]:
+    top_page = fetch_mixkit_page(REEL_BGM_REMOTE_URL)
+    paths = discover_mixkit_music_paths(top_page)
+    random.shuffle(paths)
+    for path in paths[:30]:
+        try:
+            tracks = parse_mixkit_tracks(fetch_mixkit_page(path))
+        except requests.RequestException:
+            continue
+        if tracks:
+            return tracks
+    return parse_mixkit_tracks(top_page)
+
+
+def load_bgm_history() -> List[str]:
+    try:
+        data = json.loads(REEL_BGM_HISTORY_FILE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+    if isinstance(data, dict):
+        values = data.get("recent") or []
+    else:
+        values = data
+    return [str(value) for value in values if str(value).strip()]
+
+
+def save_bgm_history(history: Sequence[str]) -> None:
+    REEL_BGM_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    recent = list(dict.fromkeys(str(value) for value in history if str(value).strip()))[-REEL_BGM_HISTORY_LIMIT:]
+    REEL_BGM_HISTORY_FILE.write_text(
+        json.dumps({"recent": recent}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def remember_bgm(identifier: str) -> None:
+    history = [value for value in load_bgm_history() if value != identifier]
+    history.append(identifier)
+    save_bgm_history(history)
+
+
+def choose_prefer_unseen_tracks(tracks: Sequence[MixkitTrack], history: Sequence[str]) -> Optional[MixkitTrack]:
+    if not tracks:
+        return None
+    recent = set(history[-REEL_BGM_HISTORY_LIMIT:])
+    unseen = [track for track in tracks if track.url not in recent]
+    return random.choice(unseen or list(tracks))
+
+
+def fetch_random_mixkit_track(history: Sequence[str]) -> Optional[MixkitTrack]:
+    top_page = fetch_mixkit_page(REEL_BGM_REMOTE_URL)
+    paths = discover_mixkit_music_paths(top_page)
+    random.shuffle(paths)
+    fallback_tracks: List[MixkitTrack] = []
+    for path in paths[:30]:
+        try:
+            tracks = parse_mixkit_tracks(fetch_mixkit_page(path))
+        except requests.RequestException:
+            continue
+        if not tracks:
+            continue
+        fallback_tracks.extend(tracks)
+        choice = choose_prefer_unseen_tracks(tracks, history)
+        if choice and choice.url not in set(history[-REEL_BGM_HISTORY_LIMIT:]):
+            return choice
+    return choose_prefer_unseen_tracks(fallback_tracks or parse_mixkit_tracks(top_page), history)
 
 
 def random_local_bgm() -> Optional[Path]:
@@ -566,15 +668,17 @@ def random_local_bgm() -> Optional[Path]:
         candidates = [REEL_BGM_PATH]
     if not candidates:
         return None
-    return random.choice(candidates)
+    history = set(load_bgm_history()[-REEL_BGM_HISTORY_LIMIT:])
+    unseen = [path for path in candidates if str(path) not in history]
+    return random.choice(unseen or candidates)
 
 
 def download_random_mixkit_bgm(output_dir: Path) -> Optional[Path]:
     try:
-        tracks = fetch_mixkit_tracks()
-        if not tracks:
+        history = load_bgm_history()
+        track = fetch_random_mixkit_track(history)
+        if not track:
             return None
-        track = random.choice(tracks)
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / "selected_mixkit_bgm.mp3"
         with requests.get(track.url, timeout=REEL_BGM_REMOTE_TIMEOUT, stream=True) as response:
@@ -583,6 +687,7 @@ def download_random_mixkit_bgm(output_dir: Path) -> Optional[Path]:
                 for chunk in response.iter_content(chunk_size=1024 * 256):
                     if chunk:
                         file.write(chunk)
+        remember_bgm(track.url)
         return output_path
     except requests.RequestException:
         return None
@@ -594,6 +699,7 @@ def select_bgm_source(output_dir: Path) -> Path:
         return remote_bgm
     local_bgm = random_local_bgm()
     if local_bgm:
+        remember_bgm(str(local_bgm))
         return local_bgm
     raise RuntimeError("BGM素材が見つかりません。Mixkit取得にもローカルフォールバックにも失敗しました。")
 

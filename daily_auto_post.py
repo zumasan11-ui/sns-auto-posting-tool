@@ -14,16 +14,19 @@ from urllib.parse import urlparse
 
 import requests
 from dotenv import load_dotenv
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 from carousel_generator import (
     CAROUSEL_COVER_TITLE_TEMPLATE,
     CAROUSEL_MAX_ADS,
+    MARGIN_X,
+    load_font,
     render_carousel_cover_slide,
     render_carousel_ending_slide,
     render_slide,
     render_text_slide,
     save_pdf,
+    split_japanese_line,
 )
 from carousel_poster import post_instagram_carousel, post_linkedin_pdf
 from cleanup_generated_assets import cleanup_generated_assets
@@ -65,10 +68,14 @@ from sheets_api import append_values, build_sheets_service, get_spreadsheet, loa
 from sheets_api import read_values, update_values
 from scripts.sheet_formatting import freeze_row_height
 from scripts.prototype_single_ad_post_assets import (
+    draw_centered_text,
+    fit_variant_text_lines,
+    load_variant_font,
     render_dynamic_cover,
     render_segment_text_slide,
     render_today_ad_slide,
     split_near_periods,
+    wrap_text_unlimited,
 )
 from token_refresh import ensure_token_fresh
 from youtube_community_export import export_youtube_community_images
@@ -83,12 +90,22 @@ STATE_DIR = Path(os.getenv("AUTO_POST_STATE_DIR", "public_state"))
 PUBLIC_ROOT = STATE_DIR / "public"
 STATE_FILE = STATE_DIR / "state" / "current.json"
 RUNTIME_DIR = Path("deliverables/auto_post")
-TEXT_SLOTS = ("12:00", "18:00")
-MEDIA_SLOTS = ("16:00", "20:30")
-SLOTS = ("12:00", "16:00", "18:00", "20:30")
-TWO_SLOT_TIMES = TEXT_SLOTS
-DAILY_MAX_POST_SECTIONS = 2
 TEXT_PLATFORMS = ("x", "threads", "facebook")
+POST_SLOTS = {
+    "x": "12:00",
+    "threads": "20:00",
+    "facebook": "12:00",
+    "linkedin_pdf": "08:00",
+    "instagram_carousel": "12:00",
+    "instagram_reel": "19:00",
+    "tiktok": "18:30",
+    "youtube": "19:30",
+}
+TEXT_SLOTS = ("12:00", "20:00")
+MEDIA_SLOTS = ("08:00", "12:00", "18:30", "19:00", "19:30")
+SLOTS = ("08:00", "12:00", "18:30", "19:00", "19:30", "20:00")
+TWO_SLOT_TIMES = TEXT_SLOTS
+DAILY_MAX_POST_SECTIONS = 1
 CAROUSEL_CAPTION = "広告分析"
 THREADS_MAX_TEXT_LENGTH = 500
 CIRCLED_DIGITS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
@@ -101,7 +118,7 @@ DEFAULT_AD_ANALYSIS_SPREADSHEET_ID = "15mskJs84UE7-CUtwELlCnjw3_DoWpAIYnZUvqiJvr
 DEFAULT_AD_ANALYSIS_MASTER_SHEET = "広告分析マスターDB"
 DEFAULT_TODAY_AD_DB_SHEET = "今日の広告DB"
 NOTION_DATE_PROPERTY = "日付"
-NOTION_READY_PROPERTY = os.getenv("NOTION_READY_PROPERTY") or "選択"
+NOTION_READY_PROPERTY = os.getenv("NOTION_READY_PROPERTY") or "状態"
 NOTION_READY_VALUE = os.getenv("NOTION_READY_VALUE") or "済み"
 
 
@@ -590,14 +607,14 @@ def extract_sections(page: Dict[str, Any], work_dir: Path) -> List[AdSection]:
             section.images.append(last_image)
         metadata = extract_section_metadata(section.source_caption + "\n" + section.text)
         caption_company, caption_service = split_source_caption(section.source_caption)
-        section.company_name = caption_company or metadata.get("会社名", "")
-        section.service_name = caption_service or metadata.get("サービス名", "")
+        section.company_name = metadata.get("会社名", "") or metadata.get("引用元", "") or caption_company
+        section.service_name = metadata.get("サービス名", "") or get_page_title(page) or caption_service
         section.ad_library_url = metadata.get("広告ライブラリURL", "")
         section.lp_url = metadata.get("LP URL", "")
         section.sheet_row = int(metadata["スプレッドシート行"]) if metadata.get("スプレッドシート行", "").isdigit() else None
         source_label = source_label_for(section.company_name, section.service_name)
         section.companies = [source_label] if source_label else extract_companies(section.text)
-        section.period_text = extract_period_text(section.source_caption + "\n" + section.text)
+        section.period_text = metadata.get("掲載期間", "") or extract_period_text(section.source_caption + "\n" + section.text)
         section.appeal_type = extract_appeal_type(section.text)
     return sections
 
@@ -629,7 +646,7 @@ def extract_section_metadata(text: str) -> Dict[str, str]:
             continue
         key = match.group(1).strip()
         value = match.group(2).strip()
-        if key in ("ジャンル", "サブジャンル", "会社名", "サービス名", "掲載期間", "広告ライブラリURL", "広告URL", "LP URL", "スプレッドシート行"):
+        if key in ("ジャンル", "サブジャンル", "会社名", "引用元", "サービス名", "掲載期間", "広告ライブラリURL", "広告URL", "LP URL", "スプレッドシート行"):
             if key == "広告URL":
                 key = "広告ライブラリURL"
             metadata[key] = value
@@ -638,7 +655,7 @@ def extract_section_metadata(text: str) -> Dict[str, str]:
 
 def extract_companies(text: str) -> List[str]:
     metadata = extract_section_metadata(text)
-    company = metadata.get("会社名", "").strip()
+    company = (metadata.get("会社名", "") or metadata.get("引用元", "")).strip()
     service = metadata.get("サービス名", "").strip()
     if company and service:
         return [f"{company} / {service}"]
@@ -708,7 +725,7 @@ def section_body_text(section: AdSection) -> str:
 def strip_metadata_lines(text: str) -> str:
     lines = []
     for line in text.splitlines():
-        if re.match(r"^\s*(ジャンル|サブジャンル|会社名|サービス名|掲載期間|広告ライブラリURL|LP URL|スプレッドシート行|広告スクショ|訴求の型)\s*[:：]", line):
+        if re.match(r"^\s*(ジャンル|サブジャンル|会社名|引用元|サービス名|掲載期間|広告ライブラリURL|LP URL|スプレッドシート行|広告スクショ|訴求の型)\s*[:：]", line):
             continue
         if re.match(r"^\s*(広告分析|ビジネスモデル分析)\s*[:：]\s*$", line):
             continue
@@ -740,7 +757,7 @@ def task_is_meaningful(task: Dict[str, Any]) -> bool:
     kind = str(task.get("kind") or "")
     if kind in {"reel", "youtube", "tiktok"}:
         text = str(task.get("caption") or task.get("description") or task.get("title") or "")
-        return "勝ち広告を分析してみましたvol." in text
+        return "広告分析vol." in text or "勝ち広告を分析してみましたvol." in text
     return is_meaningful_post_text(task.get("text") or task.get("caption") or task.get("description") or "")
 
 
@@ -791,13 +808,63 @@ def caption_for(sections: Sequence[AdSection], title: str = "勝ち広告を分�
 
 
 def video_caption_for(section: AdSection) -> str:
-    title = f"勝ち広告を分析してみましたvol.{section.number}"
+    title = f"広告分析vol.{section.number}"
     return caption_for([section], title)
 
 
+def text_source_lines_for(section: AdSection) -> List[str]:
+    company = section.company_name or (section.companies[0].split(" / ", 1)[0] if section.companies else "")
+    lines = [f"引用元：{company or 'Notionページ内広告'}"]
+    if section.period_text:
+        lines.append(f"掲載期間：{section.period_text}")
+    return lines
+
+
+def is_numbered_topic(line: str) -> bool:
+    return bool(re.match(r"^\s*[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳❶❷❸❹❺❻❼❽❾❿➊➋➌➍➎➏➐➑➒➓]", line))
+
+
+def append_numbered_section(output: List[str], lines: Sequence[str], blank_between_items: bool = True) -> None:
+    for index, line in enumerate(lines):
+        if index:
+            previous = lines[index - 1]
+            if blank_between_items or is_numbered_topic(line) or is_numbered_topic(previous):
+                output.append("")
+        output.append(line)
+
+
+def formatted_text_post_body(text: str) -> str:
+    lines = [line.strip() for line in str(text or "").splitlines() if line.strip()]
+    if not lines:
+        return ""
+
+    title_index = next((index for index, line in enumerate(lines) if line.startswith("【広告分析")), 0)
+    target_index = next((index for index, line in enumerate(lines) if "ターゲット予想" in line), -1)
+    why_index = next((index for index, line in enumerate(lines) if "なぜ" in line and "勝" in line), -1)
+    learning_index = next((index for index, line in enumerate(lines) if "学んだこと" in line), -1)
+    if min(target_index, why_index, learning_index) < 0 or not (title_index < target_index < why_index < learning_index):
+        return "\n".join(lines)
+
+    title = lines[title_index]
+    name_lines = lines[title_index + 1 : target_index]
+    target_lines = lines[target_index + 1 : why_index]
+    why_lines = lines[why_index + 1 : learning_index]
+    learning_lines = lines[learning_index + 1 :]
+
+    output: List[str] = [title, ""]
+    output.extend(name_lines)
+    output.extend(["", "", lines[target_index], ""])
+    output.extend(target_lines)
+    output.extend(["", "", "", lines[why_index], ""])
+    append_numbered_section(output, why_lines, blank_between_items=False)
+    output.extend(["", "", "", lines[learning_index], ""])
+    append_numbered_section(output, learning_lines, blank_between_items=True)
+    return "\n".join(output).strip()
+
+
 def text_post_for(section: AdSection) -> str:
-    text = section_body_text(section)
-    return (text + "\n\n" + "\n".join(source_lines_for([section]))).strip()
+    text = formatted_text_post_body(section_body_text(section))
+    return (text + "\n\n" + "\n".join(text_source_lines_for(section))).strip()
 
 
 def youtube_community_post_title(page_title: str, section: AdSection, chunk_index: int) -> str:
@@ -816,7 +883,17 @@ def quote_sheet_name(name: str) -> str:
     return "'" + name.replace("'", "''") + "'"
 
 
+def preserve_blank_lines_for_x(text: str) -> str:
+    def replace_blank_run(match: re.Match[str]) -> str:
+        newline_count = len(match.group(0))
+        return "\n" + ("\u200b\n" * (newline_count - 1))
+
+    return re.sub(r"\n{2,}", replace_blank_run, text)
+
+
 def text_for_platform(platform: str, text: str) -> str:
+    if platform == "x":
+        return preserve_blank_lines_for_x(text)
     return text
 
 
@@ -867,29 +944,303 @@ def render_carousel_business_slide(index: int, total: int, text: str) -> Image.I
     return render_text_slide("ビジネスモデル", strip_metadata_lines(strip_numbering(text)))
 
 
-def render_single_ad_carousel(section: AdSection, output_dir: Path) -> Dict[str, Any]:
-    output_dir.mkdir(parents=True, exist_ok=True)
+NUMBERED_TOPIC_TOKENS = "❶❷❸❹❺❻❼❽❾➓①②③④⑤⑥⑦⑧⑨⑩"
+MEDIA_LEARNING_LIMIT = 5
+W4_FONT_PATH = Path("/System/Library/Fonts/ヒラギノ角ゴシック W4.ttc")
+W5_FONT_PATH = Path("/System/Library/Fonts/ヒラギノ角ゴシック W5.ttc")
+
+
+def clean_post_lines(text: str) -> List[str]:
+    return [line.strip() for line in str(text or "").splitlines() if line.strip()]
+
+
+def heading_line_index(lines: Sequence[str], *keywords: str) -> int:
+    return next((index for index, line in enumerate(lines) if all(keyword in line for keyword in keywords)), -1)
+
+
+def structured_ad_parts(text: str) -> Dict[str, str]:
+    lines = clean_post_lines(text)
+    if not lines:
+        return {"title": "広告分析vol.", "target": "", "why": "", "learning": ""}
+    title = lines[0]
+    if title.startswith("【広告分析"):
+        title = title.strip("【】")
+    target_index = heading_line_index(lines, "ターゲット予想")
+    why_index = next((index for index, line in enumerate(lines) if "なぜ" in line and "勝" in line), -1)
+    learning_index = heading_line_index(lines, "学んだこと")
+    target = "\n".join(lines[target_index + 1 : why_index]) if target_index >= 0 and why_index > target_index else ""
+    why = "\n".join(lines[why_index + 1 : learning_index]) if why_index >= 0 and learning_index > why_index else ""
+    learning = "\n".join(lines[learning_index + 1 :]) if learning_index >= 0 else ""
+    return {"title": title, "target": target, "why": why, "learning": learning}
+
+
+def split_numbered_items(text: str) -> List[str]:
+    body = "\n".join(clean_post_lines(text))
+    matches = list(re.finditer(rf"([{NUMBERED_TOPIC_TOKENS}])", body))
+    if not matches:
+        return [body] if body else []
+    items: List[str] = []
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(body)
+        item = body[match.start() : end].strip()
+        if item:
+            items.append(item)
+    return items
+
+
+def split_numbered_title_body(text: str) -> tuple[str, str]:
+    lines = clean_post_lines(text)
+    if not lines:
+        return "", ""
+    return lines[0], "\n".join(lines[1:]).strip()
+
+
+def remove_first_numbered_title(text: str) -> str:
+    lines = clean_post_lines(text)
+    if len(lines) <= 1:
+        return ""
+    return "\n".join(lines[1:]).strip()
+
+
+def media_source_lines(section: AdSection) -> List[str]:
+    company = section.company_name or (section.companies[0].split(" / ", 1)[0] if section.companies else "")
+    lines = [f"引用元：{company or 'Notionページ内広告'}"]
+    if section.period_text:
+        lines.append(f"掲載期間：{section.period_text}")
+    return lines
+
+
+def media_caption_for(section: AdSection, title: str, overflow_learning: Sequence[str]) -> str:
+    lines = [title, ""]
+    if overflow_learning:
+        lines.extend(["【学んだことの続き】", ""])
+        for item in overflow_learning:
+            lines.extend([item, ""])
+    lines.extend(media_source_lines(section))
+    return "\n".join(lines).strip()
+
+
+def font_variant_path(variant: str) -> Optional[Path]:
+    if variant == "w4" and W4_FONT_PATH.exists():
+        return W4_FONT_PATH
+    if variant == "w5" and W5_FONT_PATH.exists():
+        return W5_FONT_PATH
+    return None
+
+
+def variant_font(size: int, variant: str) -> object:
+    path = font_variant_path(variant)
+    if path:
+        return ImageFont.truetype(path, size=size)
+    return load_variant_font(size, variant)
+
+
+def wrap_with_font(text: str, font: object, max_width: int) -> List[str]:
+    lines: List[str] = []
+    for raw_line in str(text or "").splitlines():
+        raw_line = raw_line.strip()
+        if not raw_line:
+            lines.append("")
+            continue
+        lines.extend(split_japanese_line(raw_line, font, max_width))
+    return lines
+
+
+def fit_loose_variant_text_lines(
+    text: str,
+    variant: str,
+    max_width: int,
+    max_height: int,
+    preferred_size: int = 38,
+    min_size: int = 28,
+    line_height_ratio: float = 2.02,
+    max_lines: int = 16,
+) -> tuple[object, List[str], int]:
+    for size in range(preferred_size, min_size - 1, -2):
+        font = variant_font(size, variant)
+        line_height = round(size * line_height_ratio)
+        lines = wrap_with_font(text, font, max_width)
+        if len(lines) <= max_lines and len(lines) * line_height <= max_height:
+            return font, lines, line_height
+    font = variant_font(min_size, variant)
+    return font, wrap_with_font(text, font, max_width), round(min_size * line_height_ratio)
+
+
+def draw_top_right_counter(image: Image.Image, text: str) -> Image.Image:
+    if not text:
+        return image
+    draw = ImageDraw.Draw(image)
+    font = load_font(34, bold=True)
+    bbox = draw.textbbox((0, 0), text, font=font)
+    x = image.width - MARGIN_X - (bbox[2] - bbox[0])
+    y = 92 - bbox[1]
+    draw.text((x, y), text, font=font, fill="#111111")
+    return image
+
+
+def draw_badge(draw: ImageDraw.ImageDraw, label: str, y: int = 76) -> None:
+    size = 42 if len(label) <= 13 else 34
+    while size >= 24:
+        font = load_font(size, bold=True)
+        width = draw.textbbox((0, 0), label, font=font)[2]
+        if MARGIN_X + width + 70 <= 1080 - MARGIN_X:
+            break
+        size -= 2
+    font = load_font(size, bold=True)
+    width = draw.textbbox((0, 0), label, font=font)[2]
+    box = (MARGIN_X, y, MARGIN_X + width + 70, y + 64)
+    draw.rounded_rectangle(box, radius=32, fill="#111111")
+    draw_centered_text(draw, label, box, font, "#ffffff")
+
+
+def render_media_text_slide(
+    label: str,
+    body: str,
+    variant: str,
+    counter: str = "",
+    loose: bool = False,
+) -> Image.Image:
+    if not loose:
+        return render_segment_text_slide(label, counter, body, variant, "top-right")
+    canvas = Image.new("RGB", (1080, 1350), "#ffffff")
+    draw = ImageDraw.Draw(canvas)
+    draw_badge(draw, label)
+    if counter:
+        draw_top_right_counter(canvas, counter)
+    body_area = (96, 285, 1080 - 96, 1210)
+    font, lines, line_height = fit_loose_variant_text_lines(
+        body,
+        variant,
+        body_area[2] - body_area[0],
+        body_area[3] - body_area[1],
+    )
+    y = body_area[1] + max(0, (body_area[3] - body_area[1] - len(lines) * line_height) // 2)
+    for line in lines:
+        draw.text((body_area[0], y), line, font=font, fill="#222222")
+        y += line_height
+    return canvas
+
+
+def render_carousel_why_slide(label: str, why: str, variant: str) -> Image.Image:
+    title, body = split_numbered_title_body(why)
+    canvas = Image.new("RGB", (1080, 1350), "#ffffff")
+    draw = ImageDraw.Draw(canvas)
+    draw_badge(draw, label)
+    title_area = (96, 280, 1080 - 96, 455)
+    title_font = variant_font(46, variant)
+    title_lines = wrap_with_font(title, title_font, title_area[2] - title_area[0])
+    while len(title_lines) * 58 > title_area[3] - title_area[1] and getattr(title_font, "size", 46) > 34:
+        title_font = variant_font(getattr(title_font, "size", 46) - 2, variant)
+        title_lines = wrap_with_font(title, title_font, title_area[2] - title_area[0])
+    y = title_area[1] + max(0, (title_area[3] - title_area[1] - len(title_lines) * 58) // 2)
+    for line in title_lines:
+        draw.text((title_area[0], y), line, font=title_font, fill="#111111")
+        y += 58
+    body_area = (96, 540, 1080 - 96, 1210)
+    body_font, body_lines, line_height = fit_variant_text_lines(
+        body,
+        variant,
+        body_area[2] - body_area[0],
+        body_area[3] - body_area[1],
+        preferred_size=42,
+        min_size=30,
+        line_height_ratio=1.72,
+        max_lines=12,
+    )
+    y = body_area[1] + max(0, (body_area[3] - body_area[1] - len(body_lines) * line_height) // 2)
+    for line in body_lines:
+        draw.text((body_area[0], y), line, font=body_font, fill="#222222")
+        y += line_height
+    return canvas
+
+
+def render_media_ending_slide(has_overflow: bool) -> Image.Image:
+    canvas = Image.new("RGB", (1080, 1350), "#ffffff")
+    draw = ImageDraw.Draw(canvas)
+    if has_overflow:
+        note = "※キャプションにも続きありんこ"
+        note_font = load_font(27, bold=True)
+        bbox = draw.textbbox((0, 0), note, font=note_font)
+        draw.text((1080 - MARGIN_X - (bbox[2] - bbox[0]), 96 - bbox[1]), note, font=note_font, fill="#111111")
+    title_font = load_font(64, bold=True)
+    y = 440
+    for line in ("続きは", "プロフィールへ"):
+        bbox = draw.textbbox((0, 0), line, font=title_font)
+        draw.text(((1080 - (bbox[2] - bbox[0])) // 2 - bbox[0], y), line, font=title_font, fill="#111111")
+        y += 82
+    sub = "毎日広告分析を発信中"
+    sub_font = load_font(35, bold=True)
+    bbox = draw.textbbox((0, 0), sub, font=sub_font)
+    draw.text(((1080 - (bbox[2] - bbox[0])) // 2 - bbox[0], 690), sub, font=sub_font, fill="#111111")
+    box = (180, 885, 900, 1010)
+    draw.rounded_rectangle(box, radius=14, outline="#111111", width=3)
+    draw.ellipse((218, 922, 276, 980), outline="#111111", width=3)
+    cfont = load_font(25)
+    y = 916
+    for line in ("プロフィール欄から", "詳しい分析・事例を見る"):
+        draw.text((320, y), line, font=cfont, fill="#333333")
+        y += 36
+    tiny = load_font(23)
+    hint = "保存して、あとで見返す"
+    bbox = draw.textbbox((0, 0), hint, font=tiny)
+    draw.text(((1080 - (bbox[2] - bbox[0])) // 2 - bbox[0], 1185), hint, font=tiny, fill="#555555")
+    return canvas
+
+
+def build_single_ad_media_slides(
+    section: AdSection,
+    body_font_variant: str,
+    include_learning_counter: bool,
+    loose_text: bool,
+    carousel_why_title: bool,
+) -> tuple[List[tuple[str, Image.Image]], str]:
     if not section.images:
         raise RuntimeError("カルーセル生成に使う広告画像がありません。")
-
     screenshot = Image.open(section.images[0])
-    body = section_body_text(section)
-    business = business_model_text(body)
-    why = winning_reason_text(body)
-    learning = learning_text(body)
+    parts = structured_ad_parts(section_body_text(section))
+    learning_items = split_numbered_items(parts["learning"])
+    visible_learning = learning_items[:MEDIA_LEARNING_LIMIT]
+    overflow_learning = learning_items[MEDIA_LEARNING_LIMIT:]
     company = section.company_name or (section.companies[0].split(" / ", 1)[0] if section.companies else "")
     service = section.service_name or (section.companies[0].split(" / ", 1)[1] if section.companies and " / " in section.companies[0] else "")
 
     slides: List[tuple[str, Image.Image]] = [
         ("slide_01_cover.png", render_dynamic_cover(section.period_text or "◯ヶ月", screenshot)),
-        ("slide_02_ad.png", render_today_ad_slide(company, service, screenshot, "w5")),
+        ("slide_02_ad.png", render_today_ad_slide(company, service, screenshot, body_font_variant)),
+        ("slide_03_target.png", render_media_text_slide("ターゲット予想", parts["target"], body_font_variant, loose=loose_text)),
     ]
-    for index, chunk in enumerate(split_near_periods(business, 3), start=1):
-        slides.append((f"slide_{index + 2:02d}_business.png", render_segment_text_slide("ビジネスモデル", f"{index}/3", chunk, "w5", "top-right")))
-    for index, chunk in enumerate(split_near_periods(why, 3), start=1):
-        slides.append((f"slide_{index + 5:02d}_why.png", render_segment_text_slide("なぜこの広告が勝ってるか", f"{index}/3", chunk, "w5", "top-right")))
-    slides.append(("slide_09_learning.png", render_segment_text_slide("今日の広告の学び", "", learning, "w5", "top-right")))
-    slides.append(("slide_10_ending.png", render_carousel_ending_slide()))
+    if carousel_why_title:
+        why_slide = render_carousel_why_slide("なぜこの広告は勝っているのか", parts["why"], body_font_variant)
+    else:
+        why_slide = render_media_text_slide(
+            "なぜこの広告が勝ってるか",
+            remove_first_numbered_title(parts["why"]),
+            body_font_variant,
+            loose=loose_text,
+        )
+    slides.append(("slide_04_why.png", why_slide))
+    learning_total = len(visible_learning)
+    for index, item in enumerate(visible_learning, start=1):
+        counter = f"{index}/{learning_total}" if include_learning_counter and learning_total else ""
+        slides.append(
+            (
+                f"slide_{index + 4:02d}_learning_{index}.png",
+                render_media_text_slide("学んだこと", item, body_font_variant, counter=counter, loose=loose_text),
+            )
+        )
+    slides.append((f"slide_{len(slides) + 1:02d}_ending.png", render_media_ending_slide(bool(overflow_learning))))
+    return slides, media_caption_for(section, parts["title"], overflow_learning)
+
+
+def render_single_ad_carousel(section: AdSection, output_dir: Path) -> Dict[str, Any]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    slides, caption = build_single_ad_media_slides(
+        section,
+        body_font_variant="w4",
+        include_learning_counter=False,
+        loose_text=False,
+        carousel_why_title=True,
+    )
 
     images: List[Image.Image] = []
     paths: List[Path] = []
@@ -901,7 +1252,7 @@ def render_single_ad_carousel(section: AdSection, output_dir: Path) -> Dict[str,
 
     pdf_path = output_dir / "linkedin_carousel.pdf"
     save_pdf(images, pdf_path)
-    return {"slides": paths, "pdf": pdf_path}
+    return {"slides": paths, "pdf": pdf_path, "caption": caption}
 
 
 def render_carousel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Dict[str, Any]:
@@ -963,17 +1314,30 @@ def render_carousel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Di
 
 def render_reel_chunk(sections: Sequence[AdSection], output_dir: Path) -> Path:
     if len(sections) == 1:
-        carousel = render_single_ad_carousel(sections[0], output_dir / "pages_source")
+        slides, _caption = build_single_ad_media_slides(
+            sections[0],
+            body_font_variant="w5",
+            include_learning_counter=True,
+            loose_text=True,
+            carousel_why_title=False,
+        )
+        pages_source = output_dir / "pages_source"
+        pages_source.mkdir(parents=True, exist_ok=True)
+        slide_paths: List[Path] = []
+        for filename, image in slides:
+            path = pages_source / filename
+            image.save(path)
+            slide_paths.append(path)
         reel_spec = ReelSpec(
             slide_duration=2.4,
             fade_duration=0,
             transition=REEL_STRUCTURED_TRANSITION,
-            ending_duration=2.0,
+            ending_duration=0,
+            zoom_amount=0.02,
         )
-        video_slide_paths = carousel["slides"][:-1]
         pages = [
-            ReelPage(path, 1.5 if index == 0 else 2.4)
-            for index, path in enumerate(video_slide_paths)
+            ReelPage(path, 1.5 if index == 0 else (2.4 if index < len(slide_paths) - 1 else 2.0))
+            for index, path in enumerate(slide_paths)
         ]
         save_reel_thumbnail(pages, output_dir)
         video_path = output_dir / "reel.mp4"
@@ -1082,9 +1446,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
 
     asset_prefix = Path("runs") / run_id
     tasks: List[Dict[str, Any]] = []
-    text_slots = ["now"] * len(sections) if run_now else distribute(sections, TEXT_SLOTS)
-    text_offsets = [0] * len(sections) if run_now else offset_minutes_by_slot(text_slots)
-    for section, slot, offset_minutes in zip(sections, text_slots, text_offsets):
+    for section in sections:
         text = text_post_for(section)
         image_url = None
         image_path = None
@@ -1092,6 +1454,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
             image_path = str(section.images[0])
             image_url = copy_public(section.images[0], asset_prefix / "source" / section.images[0].name)
         for platform in TEXT_PLATFORMS:
+            slot = "now" if run_now else POST_SLOTS[platform]
             tasks.append(
                 {
                     "id": f"{platform}-{section.number}",
@@ -1099,7 +1462,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "platform": platform,
                     "section_number": section.number,
                     "slot": slot,
-                    "slot_offset_minutes": offset_minutes,
+                    "slot_offset_minutes": 0,
                     "text": text_for_platform(platform, text),
                     "image_url": image_url,
                     "image_path": image_path,
@@ -1108,11 +1471,10 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
             )
 
     content_chunks = [[section] for section in sections]
-    media_slots = ["now"] * len(sections) if run_now else distribute(sections, MEDIA_SLOTS)
-    for chunk_index, (chunk, slot) in enumerate(zip(content_chunks, media_slots), start=1):
+    for chunk_index, chunk in enumerate(content_chunks, start=1):
         carousel = render_carousel_chunk(chunk, work_dir / f"carousel_{chunk_index:02d}")
         section = chunk[0]
-        carousel_caption = section_body_text(section) + "\n\n" + "\n".join(source_lines_for([section]))
+        carousel_caption = carousel.get("caption") or media_caption_for(section, structured_ad_parts(section_body_text(section))["title"], [])
         youtube_community_dir = export_youtube_community_images(
             carousel["slides"],
             chunk_index=chunk_index,
@@ -1127,7 +1489,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
             slide_urls.append(slide_urls[0])
         pdf_public_url = copy_public(carousel["pdf"], asset_prefix / f"carousel_{chunk_index:02d}" / "linkedin_carousel.pdf")
         reel_path = render_reel_chunk(chunk, work_dir / f"reel_{chunk_index:02d}")
-        video_caption = video_caption_for(section)
+        video_caption = carousel_caption
         facebook_manual_paths = export_facebook_manual_video(
             reel_path,
             run_id=run_id,
@@ -1144,7 +1506,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "kind": "carousel",
                     "platform": "instagram",
                     "section_number": section.number,
-                    "slot": slot,
+                    "slot": "now" if run_now else POST_SLOTS["instagram_carousel"],
                     "caption": carousel_caption,
                     "image_urls": slide_urls,
                     "youtube_community_dir": str(youtube_community_dir) if youtube_community_dir else "",
@@ -1155,7 +1517,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "kind": "linkedin_pdf",
                     "platform": "linkedin",
                     "section_number": section.number,
-                    "slot": slot,
+                    "slot": "now" if run_now else POST_SLOTS["linkedin_pdf"],
                     "caption": carousel_caption,
                     "title": CAROUSEL_CAPTION,
                     "pdf_path": str(carousel["pdf"]),
@@ -1167,7 +1529,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "kind": "reel",
                     "platform": "instagram",
                     "section_number": section.number,
-                    "slot": slot,
+                    "slot": "now" if run_now else POST_SLOTS["instagram_reel"],
                     "caption": video_caption,
                     "video_url": reel_url,
                     "status": "pending",
@@ -1177,7 +1539,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "kind": "youtube",
                     "platform": "youtube",
                     "section_number": section.number,
-                    "slot": slot,
+                    "slot": "now" if run_now else POST_SLOTS["youtube"],
                     "title": f"勝ち広告を分析してみましたvol.{section.number} #Shorts",
                     "description": video_caption,
                     "video_path": str(reel_path),
@@ -1197,7 +1559,7 @@ def create_plan(run_now: bool = False) -> Dict[str, Any]:
                     "kind": "tiktok",
                     "platform": "tiktok",
                     "section_number": section.number,
-                    "slot": slot,
+                    "slot": "now" if run_now else POST_SLOTS["tiktok"],
                     "caption": video_caption,
                     "video_path": str(reel_path),
                     "video_url": reel_url,
@@ -1308,9 +1670,6 @@ def create_threads_image_post(text: str, image_url: Optional[str]) -> str:
 
 def create_x_post(text: str, image_url: Optional[str], image_path: Optional[str] = None) -> str:
     credentials = load_credentials()
-    validation_error = validate_post_text(text, "x")
-    if validation_error:
-        raise RuntimeError(validation_error)
     client = build_client(credentials)
     if not image_url:
         return create_post(client, text)
@@ -1697,7 +2056,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Notion広告分析ページをSNSへ完全自動投稿します。")
     parser.add_argument("--prepare", action="store_true", help="最古の未投稿ページを取得し、アセットと投稿計画を作成します。")
     parser.add_argument("--execute", action="store_true", help="指定スロットの投稿を実行します。")
-    parser.add_argument("--slot", default=os.getenv("POST_SLOT", "now"), help="12:00 / 16:00 / 18:00 / 20:30 / now")
+    parser.add_argument("--slot", default=os.getenv("POST_SLOT", "now"), help="08:00 / 12:00 / 18:30 / 19:00 / 19:30 / 20:00 / now")
     parser.add_argument("--run-now", action="store_true", help="テスト用に全タスクを即時実行します。")
     return parser.parse_args()
 

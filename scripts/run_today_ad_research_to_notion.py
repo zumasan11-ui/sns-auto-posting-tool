@@ -16,10 +16,10 @@ def run(cmd: list[str]) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="今日の広告DBを2件に整え、Notion日次分析ページを作成します。")
+    parser = argparse.ArgumentParser(description="今日の広告DBを指定件数に整え、Notion日次分析ページを作成します。")
     parser.add_argument("--spreadsheet", default=os.getenv("AD_ANALYSIS_SPREADSHEET_ID", "") or DEFAULT_SPREADSHEET_ID)
     parser.add_argument("--today-sheet", default=os.getenv("TODAY_AD_DB_SHEET", "今日の広告DB"))
-    parser.add_argument("--count", type=int, default=int(os.getenv("DAILY_AD_ANALYSIS_COUNT", "2")))
+    parser.add_argument("--count", type=int, default=int(os.getenv("DAILY_AD_ANALYSIS_COUNT", "1")))
     parser.add_argument("--search-limit", type=int, default=int(os.getenv("DAILY_SEARCH_LIMIT", "5")))
     parser.add_argument("--per-search-max", type=int, default=int(os.getenv("PER_SEARCH_AD_MAX", "5")))
     parser.add_argument("--scrolls", type=int, default=10)
@@ -115,6 +115,18 @@ def main() -> int:
     if args.dry_run:
         page_cmd.append("--dry-run")
     run(page_cmd)
+
+    if not args.dry_run:
+        run([sys.executable, "scripts/format_notion_ad_metadata.py"])
+        repair_cmd = [
+            sys.executable,
+            "scripts/repair_notion_ad_images.py",
+        ]
+        if args.chrome_executable:
+            repair_cmd.extend(["--chrome-executable", args.chrome_executable])
+        if not args.headless:
+            repair_cmd.append("--no-headless")
+        run(repair_cmd)
     return 0
 
 

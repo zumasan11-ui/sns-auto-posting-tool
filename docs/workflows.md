@@ -150,27 +150,20 @@ python main.py --platform x --schedule-at "2026-06-29 09:00" -t "投稿文"
 python main.py --run-due
 ```
 
-## テキスト投稿の分散
+## 投稿スケジュール
 
-X、Threads、Facebookページのテキスト投稿は、1広告1投稿として最大2本まで投稿します。
+自動投稿は1ページ1広告として、1日に最大1本だけ投稿します。`状態=済み` のページが複数ある場合も、最も古い1ページだけを処理します。
 
 投稿枠:
 
-- 1本目: `12:00`
-- 2本目: `18:00`
+- `08:00`: LinkedIn
+- `12:00`: X、Instagramフィード、Facebookページ
+- `18:30`: TikTok
+- `19:00`: Instagramリール
+- `19:30`: YouTubeショート
+- `20:00`: Threads
 
-同じセクションはX、Threads、Facebookページへ同じタイミングで投稿します。媒体ごとにはずらしません。
-
-画像・動画系は別枠で実行します。
-
-- `12:00`: 1本目をX/Threads/Facebookへ投稿
-- `16:00`: 1本目のInstagram/LinkedIn/YouTube画像・動画系を投稿
-- `18:00`: 2本目をX/Threads/Facebookへ投稿
-- `20:30`: 2本目のInstagram/LinkedIn/YouTube画像・動画系を投稿
-
-同じ時刻内に複数タスクがある場合のみ、枠内でセクションごとに1分ずつずらします。
-
-Threadsの日次投稿はNotion本文をそのまま使います。Instagram/LinkedInカルーセル投稿のキャプションもNotion本文を使います。Reels/Shortsなど動画系は `勝ち広告を分析してみましたvol.{投稿番号}` を使います。キャプションには引用元を空行区切りで追加します。
+Threadsの日次投稿はNotion本文を整形して使います。Instagram/LinkedInカルーセル投稿とReels/Shortsなど動画系は `広告分析vol.` から始まる共通キャプションを使います。6個目以降の学びがある場合はキャプションに続きとして入れます。
 
 保存:
 

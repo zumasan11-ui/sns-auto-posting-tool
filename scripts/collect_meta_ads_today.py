@@ -25,12 +25,12 @@ from scripts.keyword_db import (
     load_keyword_set,
     load_keywords,
 )
-from scripts.search_history import HISTORY_SHEET, explain_term_selection, is_focus_genre, load_history, select_daily_research_terms, update_search_history
+from scripts.search_history import HISTORY_SHEET, explain_term_selection, load_history, select_daily_research_terms, update_search_history
 
 
 TODAY_SHEET = "今日の広告DB"
 MASTER_SHEET = "広告分析マスターDB"
-DEFAULT_DAILY_TARGET = 2
+DEFAULT_DAILY_TARGET = 1
 DEFAULT_SEARCH_LIMIT = 5
 DEFAULT_PER_SEARCH_MAX = 5
 
@@ -266,14 +266,7 @@ def main() -> int:
     history = load_history(service, spreadsheet_id, args.history_sheet)
     selected_terms = select_daily_research_terms(terms, history, args.search_limit, args.cooldown_hours)
     log("今回選んだ検索名: " + ", ".join(f"{term['search_name']}（{term.get('genre') or '未分類'}）" for term in selected_terms))
-    if args.daily_target <= 2:
-        focus_selected = [term for term in selected_terms if is_focus_genre(term.get("genre"))]
-        other_selected = [term for term in selected_terms if not is_focus_genre(term.get("genre"))]
-        log(
-            "日次2広告の配分: "
-            f"重点6ジャンル={focus_selected[0]['search_name'] if focus_selected else '候補なし'} / "
-            f"その他ジャンル={other_selected[0]['search_name'] if other_selected else '候補なし'}"
-        )
+    log("日次広告の配分: 全ジャンル横断で1件ずつ選定")
     skipped_explanations = explain_term_selection(terms, history, selected_terms)
     if skipped_explanations:
         log("検索しなかった理由:")

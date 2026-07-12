@@ -355,37 +355,20 @@ def select_daily_research_terms(
     search_limit: int = 2,
     cooldown_hours: int = 24,
 ) -> List[Dict[str, str]]:
-    """Pick daily terms with one focus-genre slot and one other-genre slot first."""
+    """Pick daily terms across all genres, using ranking and diversification only."""
     optimized = optimize_terms(terms, history, cooldown_hours)
     if search_limit <= 0:
         return []
     selected: List[Dict[str, str]] = []
     used: set[str] = set()
-
-    def add_first(predicate: Any) -> None:
-        if len(selected) >= search_limit:
-            return
-        for term in optimized:
-            key = clean(term.get("search_name")).casefold()
-            if key in used:
-                continue
-            if predicate(term):
-                selected.append(term)
-                used.add(key)
-                return
-
-    if search_limit >= 2:
-        add_first(lambda term: is_focus_genre(term.get("genre")))
-        add_first(lambda term: not is_focus_genre(term.get("genre")))
-
     for term in optimized:
-        if len(selected) >= search_limit:
-            break
         key = clean(term.get("search_name")).casefold()
         if key in used:
             continue
         selected.append(term)
         used.add(key)
+        if len(selected) >= search_limit:
+            break
     return selected
 
 

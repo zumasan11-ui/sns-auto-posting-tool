@@ -204,17 +204,22 @@ python daily_auto_post.py --execute --slot "12:00"
 python daily_auto_post.py --prepare --run-now
 ```
 
-GitHub Actionsでは日本時間5:00に投稿計画と画像/動画を生成し、12:00/18:00にX・Threads・Facebookページのテキスト投稿、16:00/20:30にInstagram Reels、YouTube Shorts、TikTokなどの画像・動画系投稿を実行します。手動テストはActionsの `Daily SNS Auto Post` から `run_now=true` で実行できます。
+GitHub Actionsでは日本時間5:00に投稿計画と画像/動画を生成し、媒体ごとの固定時刻に投稿します。1日に処理する広告は、`状態=済み` の最も古いNotionページ1つだけです。手動テストはActionsの `Daily SNS Auto Post` から `run_now=true` で実行できます。
 
-X、Threads、Facebookページのテキスト投稿は、各枠内でセクションごとに1分ずつずらします。同じセクションは3媒体へ同じタイミングで投稿します。
+- 日本時間 08:00: LinkedIn
+- 日本時間 12:00: X、Instagramフィード、Facebookページ
+- 日本時間 18:30: TikTok
+- 日本時間 19:00: Instagramリール
+- 日本時間 19:30: YouTubeショート
+- 日本時間 20:00: Threads
 
-Instagram/LinkedInカルーセルのキャプションはNotion本文を使います。Reels/Shortsなど動画系は `勝ち広告を分析してみましたvol.{投稿番号}` を使います。キャプションには引用元を空行区切りで追加します。
+Instagram/LinkedInカルーセルとReels/Shortsなど動画系のキャプションは `広告分析vol.` から始まる共通形式を使います。6個目以降の学びがある場合はキャプションに続きとして入れます。
 
 詳細は [docs/github-actions.md](docs/github-actions.md) を参照してください。
 
 ### Meta広告リサーチ
 
-Meta広告ライブラリの広告収集はApifyなしで、Mac上のブラウザ操作として実行します。Codexに「リサーチして」と指示した時だけ、`キーワードDB` の横向きジャンル表と `検索履歴DB` の実績を使って検索語を選び、`今日の広告DB` に不足分を追加します。原則2広告で、重点6ジャンル（人材・転職、情報商材・スクール、美容・美容医療、D2C・通販、SaaS・BtoB、金融）から1件、それ以外から1件を目安にします。
+Meta広告ライブラリの広告収集はApifyなしで、Mac上のブラウザ操作として実行します。Codexに「リサーチして」と指示した時だけ、`キーワードDB` の横向きジャンル表と `検索履歴DB` の実績を使って検索語を選び、`今日の広告DB` に不足分を追加します。Notion日次ページは1ページにつき1広告で作成します。
 
 詳細は [docs/meta-ad-library-manual-extractor.md](docs/meta-ad-library-manual-extractor.md) を参照してください。
 
