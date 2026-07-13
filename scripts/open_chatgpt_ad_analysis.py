@@ -1,12 +1,15 @@
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
+import requests
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
@@ -17,6 +20,7 @@ from scripts.append_meta_visible_rows_to_sheet import DEFAULT_SPREADSHEET, parse
 
 
 DEFAULT_SHEET = "広告分析マスターDB"
+SCREENSHOT_HEADERS = ("広告スクショ", "広告スクショURL", "スクショURL", "画像URL", "Screenshot URL", "screenshot_url")
 
 
 def log(message: str) -> None:
@@ -49,56 +53,72 @@ def load_sheet_row(spreadsheet_id: str, sheet_name: str, row_number: int) -> Dic
     return {header: row[index] if index < len(row) else "" for index, header in enumerate(headers)}
 
 
+def load_sheet_row_by_service(spreadsheet_id: str, sheet_name: str, service_name: str) -> tuple[int, Dict[str, str]]:
+    service = build_sheets_service(load_sheets_config())
+    values = read_values(service, spreadsheet_id, f"{quote_sheet_name(sheet_name)}!A1:AZ")
+    if not values:
+        raise RuntimeError(f"{sheet_name} が空です。")
+    headers = [clean(header) for header in values[0]]
+    needle = clean(service_name).casefold()
+    for row_number, row in enumerate(values[1:], start=2):
+        item = {header: row[index] if index < len(row) else "" for index, header in enumerate(headers)}
+        if clean(item.get("サービス名")).casefold() == needle:
+            return row_number, item
+    for row_number, row in enumerate(values[1:], start=2):
+        item = {header: row[index] if index < len(row) else "" for index, header in enumerate(headers)}
+        if needle in clean(item.get("サービス名")).casefold():
+            return row_number, item
+    raise RuntimeError(f"サービス名に一致する行が見つかりません: {service_name}")
+
+
 def safe_name(value: str) -> str:
     name = re.sub(r"[^0-9A-Za-zぁ-んァ-ン一-龥_-]+", "_", clean(value)).strip("_")
     return name[:80] or "ad"
 
 
+def first_value(row: Dict[str, str], headers: tuple[str, ...]) -> str:
+    for header in headers:
+        value = clean(row.get(header))
+        if value:
+            return value
+    return ""
+
+
 def build_prompt(row: Dict[str, str], files: List[Path]) -> str:
     service = clean(row.get("サービス名"))
     company = clean(row.get("会社名"))
-    copy = clean(row.get("コピー"))
-    genre = clean(row.get("ジャンル"))
-    sub_genre = clean(row.get("サブジャンル"))
-    period = clean(row.get("掲載期間"))
-    ad_url = clean(row.get("広告ライブラリURL"))
-    lp_url = clean(row.get("LP URL"))
     file_lines = "\n".join(f"- {path.name}" for path in files)
-    return f"""この広告とLPを見て、SNS投稿用に深く広告分析して。
+    return f"""この会社とサービスのことを短くわかりやすく解説して。
 
-前提情報：
-- 会社名：{company}
-- サービス名：{service}
-- ジャンル：{genre}
-- サブジャンル：{sub_genre}
-- 掲載期間：{period}
-- 広告ライブラリURL：{ad_url}
-- LP URL：{lp_url}
-- 画像内コピー：{copy or "未取得"}
+会社名：{company}
+サービス名：{service}
 
 添付ファイル：
 {file_lines}
 
-まず以下の構成で出して。
-
-【広告分析vol.】
-
-{service}
-
-
-◼️ターゲット予想
-
-
-
-◼️なぜこの広告は勝っているのか
-
-
-
-◼️学んだこと
-
-
-その後、必要なら追加で質問するから、このチャットで深掘りできるようにして。
+広告とLPも参考にして、専門用語をなるべく使わずに説明して。
 """
+
+
+def download_image(url: str, output_path: Path) -> bool:
+    if not re.match(r"^https?://", url):
+        return False
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+        )
+    }
+    with requests.get(url, headers=headers, stream=True, timeout=45) as response:
+        response.raise_for_status()
+        content_type = response.headers.get("content-type", "")
+        if "image" not in content_type:
+            parsed_ext = Path(urlparse(url).path).suffix.lower()
+            if parsed_ext not in {".png", ".jpg", ".jpeg", ".webp"}:
+                return False
+        with output_path.open("wb") as file:
+            shutil.copyfileobj(response.raw, file)
+    return output_path.exists() and output_path.stat().st_size > 0
 
 
 def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str) -> List[Path]:
@@ -109,10 +129,17 @@ def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str
 
     output_dir.mkdir(parents=True, exist_ok=True)
     files: List[Path] = []
-    targets = [
-        ("ad_library", clean(row.get("広告ライブラリURL"))),
-        ("lp", clean(row.get("LP URL"))),
-    ]
+    screenshot_url = first_value(row, SCREENSHOT_HEADERS)
+    if screenshot_url:
+        ad_image = output_dir / "ad_creative.png"
+        try:
+            if download_image(screenshot_url, ad_image):
+                files.append(ad_image)
+            else:
+                log("広告スクショURLを画像として保存できませんでした。")
+        except Exception as error:
+            log(f"広告スクショの保存をスキップ: {error}")
+
     launch_options: Dict[str, Any] = {"headless": True}
     if chrome_executable:
         launch_options["executable_path"] = chrome_executable
@@ -120,21 +147,13 @@ def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str
         browser = p.chromium.launch(**launch_options)
         page = browser.new_page(viewport={"width": 1440, "height": 1800}, locale="ja-JP")
         try:
-            for label, url in targets:
-                if not url:
-                    continue
-                try:
-                    page.goto(url, wait_until="domcontentloaded", timeout=90000)
-                    page.wait_for_timeout(5000)
-                    png_path = output_dir / f"{label}_fullpage.png"
-                    page.screenshot(path=str(png_path), full_page=True)
-                    files.append(png_path)
-                    if label == "lp":
-                        pdf_path = output_dir / f"{label}_fullpage.pdf"
-                        page.pdf(path=str(pdf_path), print_background=True, format="A4")
-                        files.append(pdf_path)
-                except Exception as error:
-                    log(f"{label} の取得をスキップ: {error}")
+            lp_url = clean(row.get("LP URL"))
+            if lp_url:
+                page.goto(lp_url, wait_until="domcontentloaded", timeout=90000)
+                page.wait_for_timeout(5000)
+                png_path = output_dir / "lp_fullpage.png"
+                page.screenshot(path=str(png_path), full_page=True)
+                files.append(png_path)
         finally:
             browser.close()
     return files
@@ -159,7 +178,7 @@ def open_chatgpt(prompt: str, files: List[Path], args: argparse.Namespace) -> No
         if files:
             png_files = [path for path in files if path.suffix.lower() == ".png"]
             for png_file in png_files:
-                png_path = str(png_file).replace('"', '\\"')
+                png_path = str(png_file.resolve()).replace('"', '\\"')
                 script = f"""tell application "Google Chrome" to activate
 delay 0.5
 set imageData to (read POSIX file "{png_path}" as «class PNGf»)
@@ -261,7 +280,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="マスターDBの広告行から素材を作り、ChatGPT新規チャットへ持ち込みます。")
     parser.add_argument("--spreadsheet", default=os.getenv("AD_ANALYSIS_SPREADSHEET_ID", DEFAULT_SPREADSHEET))
     parser.add_argument("--sheet-name", default=os.getenv("AD_ANALYSIS_MASTER_SHEET", DEFAULT_SHEET))
-    parser.add_argument("--row", type=int, required=True)
+    parser.add_argument("--row", type=int)
+    parser.add_argument("--service-name", help="サービス名で対象行を探します。")
     parser.add_argument("--output-dir", default="deliverables/chatgpt_ad_analysis")
     parser.add_argument("--chrome-executable", default=os.getenv("CHROME_EXECUTABLE", system_chrome_path()))
     parser.add_argument("--chatgpt-profile", default="deliverables/chatgpt_profile")
@@ -277,8 +297,14 @@ def main() -> int:
     load_dotenv(dotenv_path=".env", override=True)
     args = parse_args()
     spreadsheet_id = parse_spreadsheet_id(args.spreadsheet)
-    row = load_sheet_row(spreadsheet_id, args.sheet_name, args.row)
-    output_dir = Path(args.output_dir) / f"row_{args.row}_{safe_name(row.get('サービス名', ''))}"
+    if args.service_name:
+        row_number, row = load_sheet_row_by_service(spreadsheet_id, args.sheet_name, args.service_name)
+    elif args.row:
+        row_number = args.row
+        row = load_sheet_row(spreadsheet_id, args.sheet_name, row_number)
+    else:
+        raise RuntimeError("--row か --service-name のどちらかを指定してください。")
+    output_dir = Path(args.output_dir) / f"row_{row_number}_{safe_name(row.get('サービス名', ''))}"
     files = capture_assets(row, output_dir, args.chrome_executable)
     prompt = build_prompt(row, files)
     prompt_path = output_dir / "chatgpt_prompt.txt"
