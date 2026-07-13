@@ -88,7 +88,13 @@ def first_value(row: Dict[str, str], headers: tuple[str, ...]) -> str:
 
 
 def build_prompt(row: Dict[str, str], files: List[Path]) -> str:
-    return ""
+    company = clean(row.get("会社名"))
+    service = clean(row.get("サービス名"))
+    return f"""今日の広告
+
+会社名：{company}
+サービス名：{service}
+"""
 
 
 def download_image(url: str, output_path: Path) -> bool:
