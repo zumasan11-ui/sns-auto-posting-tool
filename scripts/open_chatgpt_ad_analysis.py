@@ -10,7 +10,6 @@ from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 import requests
-from PIL import Image
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
@@ -22,7 +21,6 @@ from scripts.append_meta_visible_rows_to_sheet import DEFAULT_SPREADSHEET, parse
 
 DEFAULT_SHEET = "広告分析マスターDB"
 SCREENSHOT_HEADERS = ("広告スクショ", "広告スクショURL", "スクショURL", "画像URL", "Screenshot URL", "screenshot_url")
-LP_CHUNK_MAX_HEIGHT = 3200
 
 
 def log(message: str) -> None:
@@ -123,19 +121,6 @@ def download_image(url: str, output_path: Path) -> bool:
     return output_path.exists() and output_path.stat().st_size > 0
 
 
-def split_tall_image(path: Path, max_height: int = LP_CHUNK_MAX_HEIGHT) -> List[Path]:
-    image = Image.open(path)
-    if image.height <= max_height:
-        return [path]
-    chunks: List[Path] = []
-    for index, top in enumerate(range(0, image.height, max_height), start=1):
-        bottom = min(top + max_height, image.height)
-        chunk_path = path.with_name(f"{path.stem}_part_{index:02d}{path.suffix}")
-        image.crop((0, top, image.width, bottom)).save(chunk_path)
-        chunks.append(chunk_path)
-    return chunks
-
-
 def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str) -> List[Path]:
     try:
         from playwright.sync_api import sync_playwright
@@ -172,10 +157,10 @@ def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str
                 page.wait_for_timeout(5000)
                 png_path = output_dir / "lp_fullpage.png"
                 page.screenshot(path=str(png_path), full_page=True)
-                files.extend(split_tall_image(png_path))
                 try:
                     pdf_path = output_dir / "lp_fullpage.pdf"
                     page.pdf(path=str(pdf_path), print_background=True, format="A4")
+                    files.append(pdf_path)
                 except Exception as error:
                     log(f"LP PDFの作成をスキップ: {error}")
         finally:
@@ -226,6 +211,21 @@ set the clipboard to imageData
 delay 0.2
 tell application "System Events" to keystroke "v" using command down
 delay 2
+"""
+                subprocess.run(["/usr/bin/osascript"], input=script, text=True, check=False)
+            document_files = [path for path in files if path.suffix.lower() in {".pdf"}]
+            if document_files:
+                file_setters = "\n".join(
+                    f'set file{index} to POSIX file "{str(path.resolve()).replace(chr(34), chr(92) + chr(34))}"'
+                    for index, path in enumerate(document_files, start=1)
+                )
+                file_list = ", ".join(f"file{index}" for index in range(1, len(document_files) + 1))
+                script = f"""{file_setters}
+set the clipboard to {{{file_list}}}
+tell application "Google Chrome" to activate
+delay 0.5
+tell application "System Events" to keystroke "v" using command down
+delay 3
 """
                 subprocess.run(["/usr/bin/osascript"], input=script, text=True, check=False)
         if args.submit:
