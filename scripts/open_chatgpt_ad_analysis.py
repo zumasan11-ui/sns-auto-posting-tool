@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 import requests
+from PIL import Image
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
@@ -21,6 +22,7 @@ from scripts.append_meta_visible_rows_to_sheet import DEFAULT_SPREADSHEET, parse
 
 DEFAULT_SHEET = "広告分析マスターDB"
 SCREENSHOT_HEADERS = ("広告スクショ", "広告スクショURL", "スクショURL", "画像URL", "Screenshot URL", "screenshot_url")
+LP_CHUNK_MAX_HEIGHT = 3200
 
 
 def log(message: str) -> None:
@@ -121,6 +123,19 @@ def download_image(url: str, output_path: Path) -> bool:
     return output_path.exists() and output_path.stat().st_size > 0
 
 
+def split_tall_image(path: Path, max_height: int = LP_CHUNK_MAX_HEIGHT) -> List[Path]:
+    image = Image.open(path)
+    if image.height <= max_height:
+        return [path]
+    chunks: List[Path] = []
+    for index, top in enumerate(range(0, image.height, max_height), start=1):
+        bottom = min(top + max_height, image.height)
+        chunk_path = path.with_name(f"{path.stem}_part_{index:02d}{path.suffix}")
+        image.crop((0, top, image.width, bottom)).save(chunk_path)
+        chunks.append(chunk_path)
+    return chunks
+
+
 def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str) -> List[Path]:
     try:
         from playwright.sync_api import sync_playwright
@@ -128,6 +143,10 @@ def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str
         raise RuntimeError("playwright が未インストールです。") from error
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    for stale_file in output_dir.glob("lp_fullpage_part_*.png"):
+        stale_file.unlink(missing_ok=True)
+    for stale_file in ("ad_creative.png", "lp_fullpage.png", "lp_fullpage.pdf"):
+        (output_dir / stale_file).unlink(missing_ok=True)
     files: List[Path] = []
     screenshot_url = first_value(row, SCREENSHOT_HEADERS)
     if screenshot_url:
@@ -153,10 +172,31 @@ def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str
                 page.wait_for_timeout(5000)
                 png_path = output_dir / "lp_fullpage.png"
                 page.screenshot(path=str(png_path), full_page=True)
-                files.append(png_path)
+                files.extend(split_tall_image(png_path))
+                try:
+                    pdf_path = output_dir / "lp_fullpage.pdf"
+                    page.pdf(path=str(pdf_path), print_background=True, format="A4")
+                except Exception as error:
+                    log(f"LP PDFの作成をスキップ: {error}")
         finally:
             browser.close()
     return files
+
+
+def click_chatgpt_send_button() -> bool:
+    script = r'''
+tell application "Google Chrome"
+  activate
+  try
+    set clickResult to execute active tab of front window javascript "(() => { const buttons = Array.from(document.querySelectorAll('button')); const button = document.querySelector('button[data-testid=\"send-button\"]') || buttons.find((b) => /送信|Send/i.test(b.getAttribute('aria-label') || b.textContent || '')); if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') return 'missing'; button.click(); return 'clicked'; })()"
+    return clickResult
+  on error errMsg
+    return "error: " & errMsg
+  end try
+end tell
+'''
+    result = subprocess.run(["/usr/bin/osascript"], input=script, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    return clean(result.stdout) == "clicked"
 
 
 def open_chatgpt(prompt: str, files: List[Path], args: argparse.Namespace) -> None:
@@ -189,19 +229,22 @@ delay 2
 """
                 subprocess.run(["/usr/bin/osascript"], input=script, text=True, check=False)
         if args.submit:
-            subprocess.run(
-                [
-                    "/usr/bin/osascript",
-                    "-e",
-                    'tell application "Google Chrome" to activate',
-                    "-e",
-                    "delay 1",
-                    "-e",
-                    'tell application "System Events" to key code 36',
-                ],
-                check=False,
-            )
-            log("通常のChromeでChatGPTへプロンプトとPNGスクショを入れて送信しました。")
+            if click_chatgpt_send_button():
+                log("通常のChromeでChatGPTへプロンプトとPNGスクショを入れて、送信ボタンをクリックしました。")
+            else:
+                subprocess.run(
+                    [
+                        "/usr/bin/osascript",
+                        "-e",
+                        'tell application "Google Chrome" to activate',
+                        "-e",
+                        "delay 1",
+                        "-e",
+                        'tell application "System Events" to key code 36',
+                    ],
+                    check=False,
+                )
+                log("送信ボタンを直接クリックできなかったため、Enterで送信を試しました。")
         else:
             log("通常のChromeでChatGPTを開き、プロンプト貼り付けとPNGスクショ添付を試しました。")
         return
