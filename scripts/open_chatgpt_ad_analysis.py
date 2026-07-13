@@ -157,19 +157,34 @@ def open_chatgpt(prompt: str, files: List[Path], args: argparse.Namespace) -> No
             check=False,
         )
         if files:
-            subprocess.run(["/usr/bin/open", str(files[0].parent)], check=False)
-            file_setters = "\n".join(
-                f'set file{index} to POSIX file "{path}"' for index, path in enumerate(files, start=1)
-            )
-            file_list = ", ".join(f"file{index}" for index in range(1, len(files) + 1))
-            script = f"""{file_setters}
-set the clipboard to {{{file_list}}}
-tell application "Google Chrome" to activate
+            png_files = [path for path in files if path.suffix.lower() == ".png"]
+            for png_file in png_files:
+                png_path = str(png_file).replace('"', '\\"')
+                script = f"""tell application "Google Chrome" to activate
 delay 0.5
+set imageData to (read POSIX file "{png_path}" as «class PNGf»)
+set the clipboard to imageData
+delay 0.2
 tell application "System Events" to keystroke "v" using command down
+delay 2
 """
-            subprocess.run(["/usr/bin/osascript", "-e", script], check=False)
-        log("通常のChromeでChatGPTを開き、プロンプト貼り付けと素材添付を試しました。素材フォルダも開きました。")
+                subprocess.run(["/usr/bin/osascript"], input=script, text=True, check=False)
+        if args.submit:
+            subprocess.run(
+                [
+                    "/usr/bin/osascript",
+                    "-e",
+                    'tell application "Google Chrome" to activate',
+                    "-e",
+                    "delay 1",
+                    "-e",
+                    'tell application "System Events" to key code 36',
+                ],
+                check=False,
+            )
+            log("通常のChromeでChatGPTへプロンプトとPNGスクショを入れて送信しました。")
+        else:
+            log("通常のChromeでChatGPTを開き、プロンプト貼り付けとPNGスクショ添付を試しました。")
         return
 
     try:
