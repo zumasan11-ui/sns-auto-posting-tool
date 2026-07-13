@@ -15,7 +15,7 @@ from sheets_api import build_sheets_service, load_sheets_config, read_values, up
 from scripts.append_meta_visible_rows_to_sheet import DEFAULT_SPREADSHEET, parse_spreadsheet_id, quote_sheet_name
 
 
-TODAY_SHEET = "今日の広告DB"
+TODAY_SHEET = "広告分析マスターDB"
 SCREENSHOT_HEADERS = ("広告スクショ", "広告スクショURL", "スクショURL", "画像URL", "Screenshot URL", "screenshot_url")
 
 
@@ -124,9 +124,9 @@ def extract_creative_image_url(ad_url: str, args: argparse.Namespace) -> str:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="今日の広告DBにMeta広告クリエイティブ画像URLを補完します。")
+    parser = argparse.ArgumentParser(description="広告分析マスターDBにMeta広告クリエイティブ画像URLを補完します。")
     parser.add_argument("--spreadsheet", default=os.getenv("AD_ANALYSIS_SPREADSHEET_ID", DEFAULT_SPREADSHEET))
-    parser.add_argument("--sheet-name", default=os.getenv("TODAY_AD_DB_SHEET", TODAY_SHEET))
+    parser.add_argument("--sheet-name", default=os.getenv("AD_ANALYSIS_MASTER_SHEET", TODAY_SHEET))
     parser.add_argument("--chrome-executable", default=os.getenv("CHROME_EXECUTABLE", ""))
     parser.add_argument("--headless", action="store_true", default=True)
     parser.add_argument("--no-headless", dest="headless", action="store_false")

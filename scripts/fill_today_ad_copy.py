@@ -17,7 +17,7 @@ from sheets_api import build_sheets_service, load_sheets_config, read_values, up
 from scripts.append_meta_visible_rows_to_sheet import DEFAULT_SPREADSHEET, parse_spreadsheet_id, quote_sheet_name
 
 
-TODAY_SHEET = "今日の広告DB"
+TODAY_SHEET = "広告分析マスターDB"
 SCREENSHOT_HEADERS = ("広告スクショ", "広告スクショURL", "スクショURL", "画像URL", "Screenshot URL", "screenshot_url")
 COPY_HEADERS = ("コピー", "広告コピー", "画像コピー", "クリエイティブコピー", "copy")
 
@@ -151,9 +151,9 @@ def extract_copy(image_url: str, work_dir: Path, row_number: int) -> str:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="今日の広告DBの広告スクショから画像内コピーをOCRし、コピー列へ補完します。")
+    parser = argparse.ArgumentParser(description="広告分析マスターDBの広告スクショから画像内コピーをOCRし、コピー列へ補完します。")
     parser.add_argument("--spreadsheet", default=os.getenv("AD_ANALYSIS_SPREADSHEET_ID", DEFAULT_SPREADSHEET))
-    parser.add_argument("--sheet-name", default=os.getenv("TODAY_AD_DB_SHEET", TODAY_SHEET))
+    parser.add_argument("--sheet-name", default=os.getenv("AD_ANALYSIS_MASTER_SHEET", TODAY_SHEET))
     parser.add_argument("--limit", type=int, default=0, help="処理する最大件数。0なら対象すべて。")
     parser.add_argument("--overwrite", action="store_true", help="既存のコピーも再OCRして上書きします。")
     parser.add_argument("--work-dir", default="deliverables/ad_copy_ocr")
@@ -191,7 +191,11 @@ def main() -> int:
         if clean(row.get(copy_header)) and not args.overwrite:
             continue
         attempted += 1
-        text = extract_copy(image_url, work_dir, row_number).strip()
+        try:
+            text = extract_copy(image_url, work_dir, row_number).strip()
+        except Exception as error:
+            log(f"{row_number}: コピー取得エラー / {error}")
+            continue
         if not text:
             log(f"{row_number}: OCR結果なし")
             continue
