@@ -90,10 +90,12 @@ def first_value(row: Dict[str, str], headers: tuple[str, ...]) -> str:
 def build_prompt(row: Dict[str, str], files: List[Path]) -> str:
     company = clean(row.get("会社名"))
     service = clean(row.get("サービス名"))
+    ad_url = clean(row.get("広告ライブラリURL"))
     return f"""今日の広告
 
 会社名：{company}
 サービス名：{service}
+広告URL：【このURLは見なくていい。俺が使うための】{ad_url}
 """
 
 
