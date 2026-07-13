@@ -124,6 +124,57 @@ def split_tall_image(path: Path, max_height: int = LP_CHUNK_MAX_HEIGHT) -> List[
     return chunks
 
 
+def capture_ad_card(page: Any, ad_url: str, output_path: Path) -> bool:
+    if not ad_url:
+        return False
+    page.goto(ad_url, wait_until="domcontentloaded", timeout=90000)
+    page.wait_for_timeout(5000)
+    close_buttons = page.locator("div[role='dialog'] button[aria-label*='閉じる'], div[role='dialog'] button[aria-label*='Close']")
+    try:
+        if close_buttons.count():
+            close_buttons.first.click(timeout=3000)
+            page.wait_for_timeout(1000)
+    except Exception:
+        pass
+    clip = page.evaluate(
+        """
+        () => {
+          const norm = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+          const targetId = new URL(location.href).searchParams.get('id') || '';
+          const nodes = Array.from(document.querySelectorAll('div, article, section'));
+          const candidates = [];
+          for (const node of nodes) {
+            const text = norm(node.innerText);
+            if (targetId && !text.includes(targetId)) continue;
+            if (!/スポンサー広告|Sponsored/.test(text)) continue;
+            if (!/ライブラリID|Library ID/.test(text)) continue;
+            const rect = node.getBoundingClientRect();
+            if (rect.width < 280 || rect.height < 300 || rect.width > 900 || rect.height > 1800) continue;
+            const imgs = Array.from(node.querySelectorAll('img')).filter((img) => {
+              const imgRect = img.getBoundingClientRect();
+              return imgRect.width >= 120 && imgRect.height >= 80;
+            });
+            if (!imgs.length) continue;
+            candidates.push({
+              x: Math.max(0, rect.x - 8),
+              y: Math.max(0, rect.y - 8),
+              width: Math.min(window.innerWidth - Math.max(0, rect.x - 8), rect.width + 16),
+              height: Math.min(document.documentElement.scrollHeight - Math.max(0, rect.y - 8), rect.height + 16),
+              area: rect.width * rect.height,
+              textLength: text.length,
+            });
+          }
+          candidates.sort((a, b) => (a.textLength - b.textLength) || (a.area - b.area));
+          return candidates[0] || null;
+        }
+        """
+    )
+    if not clip:
+        return False
+    page.screenshot(path=str(output_path), clip=clip)
+    return output_path.exists() and output_path.stat().st_size > 0
+
+
 def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str) -> List[Path]:
     try:
         from playwright.sync_api import sync_playwright
@@ -133,7 +184,7 @@ def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str
     output_dir.mkdir(parents=True, exist_ok=True)
     for stale_file in output_dir.glob("lp_fullpage_part_*.png"):
         stale_file.unlink(missing_ok=True)
-    for stale_file in ("ad_creative.png", "lp_fullpage.png", "lp_fullpage.pdf"):
+    for stale_file in ("ad_creative.png", "ad_card.png", "lp_fullpage.png", "lp_fullpage.pdf"):
         (output_dir / stale_file).unlink(missing_ok=True)
     files: List[Path] = []
     screenshot_url = first_value(row, SCREENSHOT_HEADERS)
@@ -154,6 +205,16 @@ def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str
         browser = p.chromium.launch(**launch_options)
         page = browser.new_page(viewport={"width": 1440, "height": 1800}, locale="ja-JP")
         try:
+            ad_url = clean(row.get("広告ライブラリURL"))
+            if ad_url:
+                ad_card_path = output_dir / "ad_card.png"
+                try:
+                    if capture_ad_card(page, ad_url, ad_card_path):
+                        files.append(ad_card_path)
+                    else:
+                        log("広告カード全体スクショを取得できませんでした。")
+                except Exception as error:
+                    log(f"広告カード全体スクショの取得をスキップ: {error}")
             lp_url = clean(row.get("LP URL"))
             if lp_url:
                 page.goto(lp_url, wait_until="domcontentloaded", timeout=90000)
