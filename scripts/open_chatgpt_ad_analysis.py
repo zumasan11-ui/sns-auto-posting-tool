@@ -1,16 +1,18 @@
 import argparse
+import base64
+import json
 import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 import requests
-from PIL import Image
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
@@ -22,7 +24,6 @@ from scripts.append_meta_visible_rows_to_sheet import DEFAULT_SPREADSHEET, parse
 
 DEFAULT_SHEET = "広告分析マスターDB"
 SCREENSHOT_HEADERS = ("広告スクショ", "広告スクショURL", "スクショURL", "画像URL", "Screenshot URL", "screenshot_url")
-LP_CHUNK_MAX_HEIGHT = 3200
 
 
 def log(message: str) -> None:
@@ -109,19 +110,6 @@ def download_image(url: str, output_path: Path) -> bool:
         with output_path.open("wb") as file:
             shutil.copyfileobj(response.raw, file)
     return output_path.exists() and output_path.stat().st_size > 0
-
-
-def split_tall_image(path: Path, max_height: int = LP_CHUNK_MAX_HEIGHT) -> List[Path]:
-    image = Image.open(path)
-    if image.height <= max_height:
-        return [path]
-    chunks: List[Path] = []
-    for index, top in enumerate(range(0, image.height, max_height), start=1):
-        bottom = min(top + max_height, image.height)
-        chunk_path = path.with_name(f"{path.stem}_part_{index:02d}{path.suffix}")
-        image.crop((0, top, image.width, bottom)).save(chunk_path)
-        chunks.append(chunk_path)
-    return chunks
 
 
 def capture_ad_card(page: Any, ad_url: str, output_path: Path) -> bool:
@@ -221,10 +209,10 @@ def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str
                 page.wait_for_timeout(5000)
                 png_path = output_dir / "lp_fullpage.png"
                 page.screenshot(path=str(png_path), full_page=True)
-                files.extend(split_tall_image(png_path))
                 try:
                     pdf_path = output_dir / "lp_fullpage.pdf"
                     page.pdf(path=str(pdf_path), print_background=True, format="A4")
+                    files.append(pdf_path)
                 except Exception as error:
                     log(f"LP PDFの作成をスキップ: {error}")
         finally:
@@ -237,7 +225,7 @@ def click_chatgpt_send_button() -> bool:
 tell application "Google Chrome"
   activate
   try
-    set clickResult to execute active tab of front window javascript "(() => { const buttons = Array.from(document.querySelectorAll('button')); const button = document.querySelector('button[data-testid=\"send-button\"]') || buttons.find((b) => /送信|Send/i.test(b.getAttribute('aria-label') || b.textContent || '')); if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') return 'missing'; button.click(); return 'clicked'; })()"
+    set clickResult to execute active tab of front window javascript "(() => { const findButton = () => document.querySelector('button[data-testid=\"send-button\"]') || Array.from(document.querySelectorAll('button')).find((b) => /送信|Send|プロンプトを送信/i.test(b.getAttribute('aria-label') || b.textContent || '')); const started = Date.now(); while (Date.now() - started < 8000) { const button = findButton(); if (button && !button.disabled && button.getAttribute('aria-disabled') !== 'true') { button.click(); return 'clicked'; } } return 'missing'; })()"
     return clickResult
   on error errMsg
     return "error: " & errMsg
@@ -246,6 +234,83 @@ end tell
 '''
     result = subprocess.run(["/usr/bin/osascript"], input=script, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     return clean(result.stdout) == "clicked"
+
+
+def mime_type_for(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
+        return "application/pdf"
+    if suffix == ".png":
+        return "image/png"
+    if suffix in {".jpg", ".jpeg"}:
+        return "image/jpeg"
+    if suffix == ".webp":
+        return "image/webp"
+    return "application/octet-stream"
+
+
+def attach_files_via_file_input(files: List[Path]) -> bool:
+    records = [
+        {
+            "name": path.name,
+            "mime": mime_type_for(path),
+            "b64": base64.b64encode(path.read_bytes()).decode("ascii"),
+        }
+        for path in files
+        if path.exists() and path.stat().st_size > 0
+    ]
+    if not records:
+        return False
+    js_code = """
+(() => {
+  try {
+    const records = __RECORDS__;
+    const input = Array.from(document.querySelectorAll('input[type=file]')).find((item) => !item.accept || item.accept === '');
+    if (!input) return 'no-input';
+    const dt = new DataTransfer();
+    for (const record of records) {
+      const bin = atob(record.b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      dt.items.add(new File([bytes], record.name, { type: record.mime }));
+    }
+    input.files = dt.files;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return 'assigned-' + Array.from(input.files).map((file) => file.name).join(',');
+  } catch (error) {
+    return 'error-' + error.name + '-' + error.message;
+  }
+})()
+""".replace("__RECORDS__", json.dumps(records, ensure_ascii=False))
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".js", delete=False) as temp_file:
+        temp_file.write(js_code)
+        js_path = temp_file.name
+    script = f'''
+tell application "Google Chrome"
+  activate
+  delay 2
+  set jsCode to read POSIX file "{js_path}"
+  return execute active tab of front window javascript jsCode
+end tell
+'''
+    try:
+        result = subprocess.run(
+            ["/usr/bin/osascript"],
+            input=script,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        output = clean(result.stdout)
+        if output.startswith("assigned-"):
+            log(f"ChatGPT添付: {output.removeprefix('assigned-')}")
+            return True
+        log(f"ChatGPT添付失敗: {output or clean(result.stderr)}")
+        return False
+    finally:
+        Path(js_path).unlink(missing_ok=True)
 
 
 def open_chatgpt(prompt: str, files: List[Path], args: argparse.Namespace) -> None:
@@ -266,33 +331,7 @@ def open_chatgpt(prompt: str, files: List[Path], args: argparse.Namespace) -> No
                 check=False,
             )
         if files:
-            png_files = [path for path in files if path.suffix.lower() == ".png"]
-            for png_file in png_files:
-                png_path = str(png_file.resolve()).replace('"', '\\"')
-                script = f"""tell application "Google Chrome" to activate
-delay 0.5
-set imageData to (read POSIX file "{png_path}" as «class PNGf»)
-set the clipboard to imageData
-delay 0.2
-tell application "System Events" to keystroke "v" using command down
-delay 2
-"""
-                subprocess.run(["/usr/bin/osascript"], input=script, text=True, check=False)
-            document_files = [path for path in files if path.suffix.lower() in {".pdf"}]
-            if document_files:
-                file_setters = "\n".join(
-                    f'set file{index} to POSIX file "{str(path.resolve()).replace(chr(34), chr(92) + chr(34))}"'
-                    for index, path in enumerate(document_files, start=1)
-                )
-                file_list = ", ".join(f"file{index}" for index in range(1, len(document_files) + 1))
-                script = f"""{file_setters}
-set the clipboard to {{{file_list}}}
-tell application "Google Chrome" to activate
-delay 0.5
-tell application "System Events" to keystroke "v" using command down
-delay 3
-"""
-                subprocess.run(["/usr/bin/osascript"], input=script, text=True, check=False)
+            attach_files_via_file_input(files)
         if args.submit:
             if click_chatgpt_send_button():
                 log("通常のChromeでChatGPTへPNGスクショを入れて、送信ボタンをクリックしました。")
