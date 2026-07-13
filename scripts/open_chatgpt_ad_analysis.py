@@ -144,9 +144,32 @@ def open_chatgpt(prompt: str, files: List[Path], args: argparse.Namespace) -> No
     if args.system_chrome:
         subprocess.run(["/usr/bin/pbcopy"], input=prompt, text=True, check=True)
         subprocess.run(["/usr/bin/open", "-a", "Google Chrome", args.chatgpt_url], check=False)
+        subprocess.run(
+            [
+                "/usr/bin/osascript",
+                "-e",
+                'tell application "Google Chrome" to activate',
+                "-e",
+                'delay 0.5',
+                "-e",
+                'tell application "System Events" to keystroke "v" using command down',
+            ],
+            check=False,
+        )
         if files:
             subprocess.run(["/usr/bin/open", str(files[0].parent)], check=False)
-        log("通常のChromeでChatGPTを開きました。プロンプトはクリップボードにコピー済みです。素材フォルダも開きました。")
+            file_setters = "\n".join(
+                f'set file{index} to POSIX file "{path}"' for index, path in enumerate(files, start=1)
+            )
+            file_list = ", ".join(f"file{index}" for index in range(1, len(files) + 1))
+            script = f"""{file_setters}
+set the clipboard to {{{file_list}}}
+tell application "Google Chrome" to activate
+delay 0.5
+tell application "System Events" to keystroke "v" using command down
+"""
+            subprocess.run(["/usr/bin/osascript", "-e", script], check=False)
+        log("通常のChromeでChatGPTを開き、プロンプト貼り付けと素材添付を試しました。素材フォルダも開きました。")
         return
 
     try:
@@ -188,7 +211,33 @@ def open_chatgpt(prompt: str, files: List[Path], args: argparse.Namespace) -> No
             editor.fill(prompt, timeout=15000)
         except Exception:
             page.keyboard.insert_text(prompt)
-        log("ChatGPTの新規チャットに素材とプロンプトを準備しました。内容を確認して送信してください。")
+        if args.submit:
+            sent = False
+            for selector in (
+                "button[data-testid='send-button']",
+                "button[aria-label*='送信']",
+                "button[aria-label*='Send']",
+            ):
+                try:
+                    button = page.locator(selector).last
+                    button.wait_for(state="visible", timeout=15000)
+                    button.click(timeout=15000)
+                    sent = True
+                    break
+                except Exception:
+                    continue
+            if not sent:
+                try:
+                    page.keyboard.press("Enter")
+                    sent = True
+                except Exception:
+                    pass
+            if sent:
+                log("ChatGPTへ送信しました。回答生成が始まっているはずです。")
+            else:
+                log("送信ボタンを押せませんでした。画面上で送信だけ手動で押してください。")
+        else:
+            log("ChatGPTの新規チャットに素材とプロンプトを準備しました。内容を確認して送信してください。")
         page.wait_for_timeout(args.keep_open_seconds * 1000)
         context.close()
 
@@ -205,6 +254,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--keep-open-seconds", type=int, default=3600)
     parser.add_argument("--prepare-only", action="store_true")
     parser.add_argument("--system-chrome", action="store_true", help="通常のChromeでChatGPTを開き、プロンプトをクリップボードへコピーします。")
+    parser.add_argument("--submit", action="store_true", help="ChatGPTへプロンプトを入力後、自動で送信します。")
     return parser.parse_args()
 
 
