@@ -1968,7 +1968,7 @@ def append_sheet_row(state: Dict[str, Any]) -> None:
         spreadsheet_id,
         master_sheet,
         master_headers,
-        ["訴求の型", "分析日", "状況", "最終掲載期間"],
+        ["訴求の型", "分析日", "状態", "最終掲載期間"],
     )
     if {"広告ライブラリURL", "広告分析", "ビジネスモデル", "訴求の型"}.difference(set(master_headers)):
         raise RuntimeError(f"{master_sheet} に必要なヘッダーがありません。")
@@ -1998,7 +1998,6 @@ def append_sheet_row(state: Dict[str, Any]) -> None:
         current = row_to_header_map(rows_by_number[target_row], master_headers)
         updates = {
             "分析状況": "分析済み",
-            "ステータス": "分析済み",
             "会社名": ad["company_name"] or current.get("会社名", ""),
             "サービス名": ad["service_name"] or current.get("サービス名", ""),
             "広告分析": ad["analysis"],
@@ -2006,7 +2005,7 @@ def append_sheet_row(state: Dict[str, Any]) -> None:
             "訴求の型": ad["appeal_type"],
             "X投稿URL": ad["x_url"],
             "分析日": now_jst().strftime("%Y-%m-%d"),
-            "状況": "掲載中",
+            "状態": "掲載中",
         }
         if not current.get("ジャンル") and ad.get("genre"):
             updates["ジャンル"] = ad["genre"]

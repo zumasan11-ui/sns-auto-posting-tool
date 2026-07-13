@@ -27,7 +27,6 @@ DEFAULT_GENRE = ""
 DEFAULT_SUB_GENRE = ""
 REQUIRED_HEADERS = [
     "検索名",
-    "分析状況",
     "ジャンル",
     "サブジャンル",
     "会社名",
@@ -38,11 +37,15 @@ REQUIRED_HEADERS = [
     "LP URL",
     "広告スクショ",
     "広告分析",
+    "コピー",
     "ビジネスモデル",
     "訴求の型",
     "X投稿URL",
     "分析日",
-    "ステータス",
+    "分析状況",
+    "状態",
+    "最終掲載期間",
+    "メモ",
 ]
 BAD_NAME_PREFIXES = (
     "この広告には",
@@ -104,8 +107,12 @@ def ensure_sheet_headers(service: Any, spreadsheet_id: str, sheet_name: str) -> 
         return REQUIRED_HEADERS
     if all(header in headers for header in REQUIRED_HEADERS):
         return headers
-    update_values(service, spreadsheet_id, f"{quote_sheet_name(sheet_name)}!A1:{chr(ord('A') + len(REQUIRED_HEADERS) - 1)}1", [REQUIRED_HEADERS])
-    return REQUIRED_HEADERS
+    updated = list(headers)
+    for header in REQUIRED_HEADERS:
+        if header not in updated:
+            updated.append(header)
+    update_values(service, spreadsheet_id, f"{quote_sheet_name(sheet_name)}!A1:{chr(ord('A') + len(updated) - 1)}1", [updated])
+    return updated
 
 
 def existing_ad_urls(service: Any, spreadsheet_id: str, sheet_name: str, headers: List[str]) -> set[str]:
@@ -417,11 +424,15 @@ def build_sheet_row(row: Dict[str, Any], headers: List[str]) -> List[Any]:
         "LP URL": row["lp_url"],
         "広告スクショ": str(row.get("screenshot_url", "")),
         "広告分析": "",
+        "コピー": "",
         "ビジネスモデル": "",
         "訴求の型": "",
         "X投稿URL": "",
         "分析日": "",
-        "ステータス": "未分析",
+        "分析状況": "未分析",
+        "状態": "掲載中",
+        "最終掲載期間": "",
+        "メモ": "",
     }
     return [values.get(header, "") for header in headers]
 
@@ -463,10 +474,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-enrich-from-lp", dest="enrich_from_lp", action="store_false")
     parser.add_argument("--company-search", action="store_true", default=True)
     parser.add_argument("--no-company-search", dest="company_search", action="store_false")
-    parser.add_argument("--daily-genre-cap", type=int, default=2, help="作成中広告で同ジャンルを優先的に抑える目安。足りない時は自動で緩和します。")
-    parser.add_argument("--daily-company-cap", type=int, default=1, help="作成中広告で同一会社を優先的に抑える目安。足りない時は自動で緩和します。")
-    parser.add_argument("--daily-lp-cap", type=int, default=1, help="作成中広告で同一LPを優先的に抑える目安。足りない時は自動で緩和します。")
-    parser.add_argument("--daily-service-cap", type=int, default=1, help="作成中広告で同一サービス名を優先的に抑える目安。足りない時は自動で緩和します。")
+    parser.add_argument("--daily-genre-cap", type=int, default=2, help="分析中広告で同ジャンルを優先的に抑える目安。足りない時は自動で緩和します。")
+    parser.add_argument("--daily-company-cap", type=int, default=1, help="分析中広告で同一会社を優先的に抑える目安。足りない時は自動で緩和します。")
+    parser.add_argument("--daily-lp-cap", type=int, default=1, help="分析中広告で同一LPを優先的に抑える目安。足りない時は自動で緩和します。")
+    parser.add_argument("--daily-service-cap", type=int, default=1, help="分析中広告で同一サービス名を優先的に抑える目安。足りない時は自動で緩和します。")
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 
@@ -476,7 +487,7 @@ def existing_diversity_counts(rows: List[Dict[str, Any]]) -> tuple[Counter[str],
     company_counts: Counter[str] = Counter()
     lp_counts: Counter[str] = Counter()
     service_counts: Counter[str] = Counter()
-    active_statuses = {"", "未分析", "作成中", "Notion投入済み"}
+    active_statuses = {"", "未分析", "分析中"}
     for row in rows:
         status = clean_name(row.get("ステータス") or row.get("分析状況"))
         if status not in active_statuses:

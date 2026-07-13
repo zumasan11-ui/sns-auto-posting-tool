@@ -61,7 +61,7 @@ def ad_url_set(rows: List[Dict[str, Any]]) -> Set[str]:
 
 
 def count_open_today_ads(rows: List[Dict[str, Any]]) -> int:
-    active_statuses = {"", "未分析", "作成中", "Notion投入済み"}
+    active_statuses = {"", "未分析", "分析中"}
     count = 0
     for row in rows:
         status = clean(row.get("ステータス") or row.get("分析状況"))
@@ -122,12 +122,16 @@ def set_row_background(
 
 def mark_rows_working(service: Any, spreadsheet_id: str, sheet_name: str, headers: List[str], rows: List[Dict[str, Any]]) -> None:
     row_numbers = [int(row["_row_number"]) for row in rows if str(row.get("_row_number", "")).isdigit()]
-    for header in ("分析状況", "ステータス"):
+    updates_by_header = {
+        "分析状況": "分析中",
+        "状態": "掲載中",
+    }
+    for header, value in updates_by_header.items():
         if header not in headers:
             continue
         column = column_letter(headers.index(header))
         for row_number in row_numbers:
-            update_values(service, spreadsheet_id, f"{quote_sheet_name(sheet_name)}!{column}{row_number}:{column}{row_number}", [["作成中"]])
+            update_values(service, spreadsheet_id, f"{quote_sheet_name(sheet_name)}!{column}{row_number}:{column}{row_number}", [[value]])
     set_row_background(
         service,
         spreadsheet_id,
@@ -281,7 +285,7 @@ def log_final_summary(
     keyword_added_count: int,
 ) -> None:
     log(f"広告収集件数: {collected_count}件")
-    log(f"広告分析マスターDBへ作成中で追加した件数: {added_count}件")
+    log(f"広告分析マスターDBへ分析中で追加した件数: {added_count}件")
     log(f"検索履歴更新件数: {history_updates}件")
     log(f"キーワードDBへ追加した件数: {keyword_added_count}件")
 
@@ -324,9 +328,9 @@ def main() -> int:
     _master_headers, master_rows = read_rows(service, spreadsheet_id, args.master_sheet)
     open_count = count_open_today_ads(today_rows)
     missing_count = max(args.daily_target - open_count, 0)
-    log(f"広告分析マスターDB 作成中残: {open_count}件 / 目標: {args.daily_target}件 / 新規必要: {missing_count}件")
+    log(f"広告分析マスターDB 分析中残: {open_count}件 / 目標: {args.daily_target}件 / 新規必要: {missing_count}件")
     if missing_count <= 0:
-        log("広告分析マスターDBの作成中行が目標件数に達しているため、新規収集はスキップします。")
+        log("広告分析マスターDBの分析中行が目標件数に達しているため、新規収集はスキップします。")
         log_final_summary(0, 0, 0, 0)
         return 0
 
@@ -432,7 +436,7 @@ def main() -> int:
             f"重複スキップ={item['duplicate_count']} / 失敗={item['failure_count']} / "
             f"優先度={item['priority'] or '-'} / 次回検索予定日={item['next_search_date'] or '-'}"
         )
-    log(f"広告分析マスターDB 作成中残: {count_open_today_ads(final_today_rows)}件")
+    log(f"広告分析マスターDB 分析中残: {count_open_today_ads(final_today_rows)}件")
     added_final_rows = [row for row in final_today_rows if clean(row.get("広告ライブラリURL")) not in existing_before]
     genre_counts = genre_counts_for_rows(added_final_rows)
     duplicate_companies = duplicate_companies_for_rows(added_final_rows)

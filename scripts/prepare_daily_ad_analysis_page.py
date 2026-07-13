@@ -35,6 +35,15 @@ def quote_sheet_name(name: str) -> str:
     return "'" + name.replace("'", "''") + "'"
 
 
+def column_letter(index: int) -> str:
+    result = ""
+    index += 1
+    while index:
+        index, rem = divmod(index - 1, 26)
+        result = chr(ord("A") + rem) + result
+    return result
+
+
 def clean(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
@@ -49,7 +58,13 @@ def first_value(row: Dict[str, Any], headers: Iterable[str]) -> str:
 
 def row_is_unanalyzed(row: Dict[str, Any]) -> bool:
     status = clean(row.get("ステータス") or row.get("分析状況"))
-    return not clean(row.get("広告分析")) and not clean(row.get("ビジネスモデル")) and status in {"", "未分析", "作成中"}
+    memo = clean(row.get("メモ"))
+    return (
+        not clean(row.get("広告分析"))
+        and not clean(row.get("ビジネスモデル"))
+        and status in {"", "未分析", "分析中"}
+        and "Notion投入済み" not in memo
+    )
 
 
 def row_has_ad(row: Dict[str, Any]) -> bool:
@@ -270,20 +285,26 @@ def create_daily_page(ads: List[Dict[str, Any]], dry_run: bool = False) -> Dict[
 
 
 def mark_ads_inserted_to_notion(sheet_name: str, spreadsheet_id: str, headers: List[str], ads: List[Dict[str, Any]]) -> None:
-    if "ステータス" not in headers and "分析状況" not in headers:
-        return
     config = load_sheets_config()
     service = build_sheets_service(config)
-    status_header = "ステータス" if "ステータス" in headers else "分析状況"
-    column = chr(ord("A") + headers.index(status_header))
     for ad in ads:
         row_number = clean(ad.get("_sheet_row"))
-        if row_number.isdigit():
-            update_values(service, spreadsheet_id, f"{quote_sheet_name(sheet_name)}!{column}{row_number}:{column}{row_number}", [["Notion投入済み"]])
+        if not row_number.isdigit():
+            continue
+        updates = {
+            "分析状況": "分析中",
+            "状態": "掲載中",
+            "メモ": "Notion投入済み",
+        }
+        for header, value in updates.items():
+            if header not in headers:
+                continue
+            column = column_letter(headers.index(header))
+            update_values(service, spreadsheet_id, f"{quote_sheet_name(sheet_name)}!{column}{row_number}:{column}{row_number}", [[value]])
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="広告分析マスターDBの作成中広告から、Notion分析ページを作成します。")
+    parser = argparse.ArgumentParser(description="広告分析マスターDBの分析中広告から、Notion分析ページを作成します。")
     parser.add_argument("--sheet-name", default=os.getenv("AD_ANALYSIS_MASTER_SHEET", DEFAULT_SHEET))
     parser.add_argument("--spreadsheet-id", default=os.getenv("AD_ANALYSIS_SPREADSHEET_ID", DEFAULT_SPREADSHEET_ID))
     parser.add_argument("--count", type=int, default=int(os.getenv("DAILY_AD_ANALYSIS_COUNT", DEFAULT_AD_COUNT)))
