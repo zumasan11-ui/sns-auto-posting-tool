@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.kazuma.cleanup-old-chatgpt-ad-analysis</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/kazuma/Documents/SNS自動投稿ツール/scripts/cleanup_old_chatgpt_ad_analysis.zsh</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>9</integer>
+    <key>Minute</key>
+    <integer>10</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/kazuma/Library/Logs/cleanup-old-chatgpt-ad-analysis.launchd.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/kazuma/Library/Logs/cleanup-old-chatgpt-ad-analysis.launchd.err.log</string>
+</dict>
+</plist>
