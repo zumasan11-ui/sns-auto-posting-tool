@@ -331,6 +331,7 @@ def optimize_terms(
     terms: List[Dict[str, str]],
     history: Dict[str, Dict[str, Any]],
     cooldown_hours: int = 24,
+    avoid_genres: Optional[set[str]] = None,
 ) -> List[Dict[str, str]]:
     filtered = []
     for term in terms:
@@ -342,7 +343,13 @@ def optimize_terms(
         filtered,
         key=lambda term: sort_tuple(term, history.get(clean(term.get("search_name")).casefold())),
     )
-    return diversify_terms(ranked, history)
+    diversified = diversify_terms(ranked, history)
+    avoid = {clean(genre) for genre in (avoid_genres or set()) if clean(genre)}
+    if not avoid:
+        return diversified
+    preferred = [term for term in diversified if clean(term.get("genre")) not in avoid]
+    deferred = [term for term in diversified if clean(term.get("genre")) in avoid]
+    return preferred + deferred
 
 
 def is_focus_genre(genre: Any) -> bool:
@@ -354,9 +361,10 @@ def select_daily_research_terms(
     history: Dict[str, Dict[str, Any]],
     search_limit: int = 2,
     cooldown_hours: int = 24,
+    avoid_genres: Optional[set[str]] = None,
 ) -> List[Dict[str, str]]:
-    """Pick daily terms across all genres, using ranking and diversification only."""
-    optimized = optimize_terms(terms, history, cooldown_hours)
+    """Pick daily terms across all genres, preferring genres not used recently."""
+    optimized = optimize_terms(terms, history, cooldown_hours, avoid_genres=avoid_genres)
     if search_limit <= 0:
         return []
     selected: List[Dict[str, str]] = []

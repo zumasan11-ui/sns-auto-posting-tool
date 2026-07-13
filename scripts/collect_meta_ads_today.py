@@ -278,6 +278,20 @@ def duplicate_companies_for_rows(rows: List[Dict[str, Any]]) -> Dict[str, int]:
     return {company: count for company, count in counts.items() if count > 1}
 
 
+def recent_ad_genres(rows: List[Dict[str, Any]], limit: int = 7) -> List[str]:
+    recent: List[str] = []
+    for row in sorted(rows, key=lambda item: int(item.get("_row_number", 0) or 0), reverse=True):
+        genre = clean(row.get("ジャンル"))
+        ad_url = clean(row.get("広告ライブラリURL"))
+        if not genre or not ad_url:
+            continue
+        if genre not in recent:
+            recent.append(genre)
+        if len(recent) >= limit:
+            break
+    return recent
+
+
 def log_final_summary(
     collected_count: int,
     added_count: int,
@@ -336,9 +350,17 @@ def main() -> int:
 
     terms = load_keywords(service, spreadsheet_id, args.keyword_sheet)
     history = load_history(service, spreadsheet_id, args.history_sheet)
-    selected_terms = select_daily_research_terms(terms, history, args.search_limit, args.cooldown_hours)
+    avoid_genres = set(recent_ad_genres(master_rows, limit=6))
+    selected_terms = select_daily_research_terms(
+        terms,
+        history,
+        args.search_limit,
+        args.cooldown_hours,
+        avoid_genres=avoid_genres,
+    )
     log("今回選んだ検索名: " + ", ".join(f"{term['search_name']}（{term.get('genre') or '未分類'}）" for term in selected_terms))
-    log("日次広告の配分: 全ジャンル横断で1件ずつ選定")
+    log("日次広告の配分: 全ジャンル横断で1件。直近ジャンルは可能な限り後回し")
+    log("今回後回しにする直近ジャンル: " + (", ".join(sorted(avoid_genres)) if avoid_genres else "なし"))
     skipped_explanations = explain_term_selection(terms, history, selected_terms)
     if skipped_explanations:
         log("検索しなかった理由:")
