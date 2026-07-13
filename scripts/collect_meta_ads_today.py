@@ -14,7 +14,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from sheets_api import build_sheets_service, load_sheets_config, read_values
+from sheets_api import build_sheets_service, get_spreadsheet, load_sheets_config, read_values, update_values
 from scripts.append_meta_visible_rows_to_sheet import DEFAULT_SPREADSHEET, ensure_sheet_headers, parse_spreadsheet_id, quote_sheet_name
 from scripts.keyword_db import (
     KEYWORD_SHEET,
@@ -28,8 +28,8 @@ from scripts.keyword_db import (
 from scripts.search_history import HISTORY_SHEET, explain_term_selection, load_history, select_daily_research_terms, update_search_history
 
 
-TODAY_SHEET = "今日の広告DB"
 MASTER_SHEET = "広告分析マスターDB"
+TODAY_SHEET = MASTER_SHEET
 DEFAULT_DAILY_TARGET = 1
 DEFAULT_SEARCH_LIMIT = 5
 DEFAULT_PER_SEARCH_MAX = 5
@@ -61,13 +61,81 @@ def ad_url_set(rows: List[Dict[str, Any]]) -> Set[str]:
 
 
 def count_open_today_ads(rows: List[Dict[str, Any]]) -> int:
-    active_statuses = {"", "未分析", "Notion投入済み"}
+    active_statuses = {"", "未分析", "作成中", "Notion投入済み"}
     count = 0
     for row in rows:
         status = clean(row.get("ステータス") or row.get("分析状況"))
         if clean(row.get("広告ライブラリURL")) and status in active_statuses and not clean(row.get("広告分析")):
             count += 1
     return count
+
+
+def column_letter(index: int) -> str:
+    result = ""
+    index += 1
+    while index:
+        index, rem = divmod(index - 1, 26)
+        result = chr(ord("A") + rem) + result
+    return result
+
+
+def sheet_id_for(service: Any, spreadsheet_id: str, sheet_name: str) -> int:
+    spreadsheet = get_spreadsheet(service, spreadsheet_id)
+    for sheet in spreadsheet.get("sheets", []):
+        properties = sheet.get("properties", {})
+        if properties.get("title") == sheet_name:
+            return int(properties["sheetId"])
+    raise RuntimeError(f"シートが見つかりません: {sheet_name}")
+
+
+def set_row_background(
+    service: Any,
+    spreadsheet_id: str,
+    sheet_name: str,
+    row_numbers: List[int],
+    column_count: int,
+    color: Dict[str, float],
+) -> None:
+    if not row_numbers:
+        return
+    sheet_id = sheet_id_for(service, spreadsheet_id, sheet_name)
+    requests = []
+    for row_number in sorted({int(row) for row in row_numbers if int(row) >= 2}):
+        requests.append(
+            {
+                "repeatCell": {
+                    "range": {
+                        "sheetId": sheet_id,
+                        "startRowIndex": row_number - 1,
+                        "endRowIndex": row_number,
+                        "startColumnIndex": 0,
+                        "endColumnIndex": column_count,
+                    },
+                    "cell": {"userEnteredFormat": {"backgroundColor": color}},
+                    "fields": "userEnteredFormat.backgroundColor",
+                }
+            }
+        )
+    if requests:
+        service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests}).execute()
+
+
+def mark_rows_working(service: Any, spreadsheet_id: str, sheet_name: str, headers: List[str], rows: List[Dict[str, Any]]) -> None:
+    row_numbers = [int(row["_row_number"]) for row in rows if str(row.get("_row_number", "")).isdigit()]
+    for header in ("分析状況", "ステータス"):
+        if header not in headers:
+            continue
+        column = column_letter(headers.index(header))
+        for row_number in row_numbers:
+            update_values(service, spreadsheet_id, f"{quote_sheet_name(sheet_name)}!{column}{row_number}:{column}{row_number}", [["作成中"]])
+    set_row_background(
+        service,
+        spreadsheet_id,
+        sheet_name,
+        row_numbers,
+        len(headers),
+        {"red": 1.0, "green": 0.95, "blue": 0.6},
+    )
 
 
 def run_browser_collect(args: argparse.Namespace, term: Dict[str, str], output_path: Path, per_search_max: int) -> None:
@@ -213,17 +281,17 @@ def log_final_summary(
     keyword_added_count: int,
 ) -> None:
     log(f"広告収集件数: {collected_count}件")
-    log(f"今日の広告DBへ追加した件数: {added_count}件")
+    log(f"広告分析マスターDBへ作成中で追加した件数: {added_count}件")
     log(f"検索履歴更新件数: {history_updates}件")
     log(f"キーワードDBへ追加した件数: {keyword_added_count}件")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="キーワードDB/検索履歴DBを使って今日の広告DBへMeta広告候補を補充します。")
+    parser = argparse.ArgumentParser(description="キーワードDB/検索履歴DBを使って広告分析マスターDBへMeta広告候補を補充します。")
     parser.add_argument("--spreadsheet", default=DEFAULT_SPREADSHEET)
     parser.add_argument("--keyword-sheet", default=os.getenv("KEYWORD_DB_SHEET", KEYWORD_SHEET))
     parser.add_argument("--history-sheet", default=os.getenv("SEARCH_HISTORY_SHEET", HISTORY_SHEET))
-    parser.add_argument("--today-sheet", default=os.getenv("TODAY_AD_DB_SHEET", TODAY_SHEET))
+    parser.add_argument("--today-sheet", default=os.getenv("AD_ANALYSIS_MASTER_SHEET", TODAY_SHEET))
     parser.add_argument("--master-sheet", default=os.getenv("AD_ANALYSIS_MASTER_SHEET", MASTER_SHEET))
     parser.add_argument("--daily-target", type=int, default=int(os.getenv("DAILY_AD_TARGET", DEFAULT_DAILY_TARGET)))
     parser.add_argument("--search-limit", type=int, default=int(os.getenv("DAILY_SEARCH_LIMIT", DEFAULT_SEARCH_LIMIT)))
@@ -256,9 +324,9 @@ def main() -> int:
     _master_headers, master_rows = read_rows(service, spreadsheet_id, args.master_sheet)
     open_count = count_open_today_ads(today_rows)
     missing_count = max(args.daily_target - open_count, 0)
-    log(f"今日の広告DB 未分析残: {open_count}件 / 目標: {args.daily_target}件 / 新規必要: {missing_count}件")
+    log(f"広告分析マスターDB 作成中残: {open_count}件 / 目標: {args.daily_target}件 / 新規必要: {missing_count}件")
     if missing_count <= 0:
-        log("今日の広告DBが目標件数に達しているため、新規収集はスキップします。")
+        log("広告分析マスターDBの作成中行が目標件数に達しているため、新規収集はスキップします。")
         log_final_summary(0, 0, 0, 0)
         return 0
 
@@ -312,6 +380,7 @@ def main() -> int:
             duplicate_count = max(hit_count - added_count, 0)
             total_added += added_count
             added_rows = [row for row in after_rows if clean(row.get("広告ライブラリURL")) in added_urls]
+            mark_rows_working(service, spreadsheet_id, args.today_sheet, _after_headers, added_rows)
             new_keyword_candidates.extend(
                 add_keyword_candidates(service, spreadsheet_id, added_rows, set(history.keys()), args.keyword_sheet)
             )
@@ -363,7 +432,7 @@ def main() -> int:
             f"重複スキップ={item['duplicate_count']} / 失敗={item['failure_count']} / "
             f"優先度={item['priority'] or '-'} / 次回検索予定日={item['next_search_date'] or '-'}"
         )
-    log(f"今日の広告DB 未分析残: {count_open_today_ads(final_today_rows)}件")
+    log(f"広告分析マスターDB 作成中残: {count_open_today_ads(final_today_rows)}件")
     added_final_rows = [row for row in final_today_rows if clean(row.get("広告ライブラリURL")) not in existing_before]
     genre_counts = genre_counts_for_rows(added_final_rows)
     duplicate_companies = duplicate_companies_for_rows(added_final_rows)

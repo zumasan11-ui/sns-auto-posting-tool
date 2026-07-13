@@ -64,7 +64,7 @@ from reels_generator import (
     save_reel_thumbnail,
     write_structured_mp4,
 )
-from sheets_api import append_values, build_sheets_service, get_spreadsheet, load_sheets_config
+from sheets_api import build_sheets_service, get_spreadsheet, load_sheets_config
 from sheets_api import read_values, update_values
 from scripts.sheet_formatting import freeze_row_height
 from scripts.prototype_single_ad_post_assets import (
@@ -116,7 +116,6 @@ TIKTOK_ENABLED = (
 )
 DEFAULT_AD_ANALYSIS_SPREADSHEET_ID = "15mskJs84UE7-CUtwELlCnjw3_DoWpAIYnZUvqiJvrdc"
 DEFAULT_AD_ANALYSIS_MASTER_SHEET = "広告分析マスターDB"
-DEFAULT_TODAY_AD_DB_SHEET = "今日の広告DB"
 NOTION_DATE_PROPERTY = "日付"
 NOTION_READY_PROPERTY = os.getenv("NOTION_READY_PROPERTY") or "状態"
 NOTION_READY_VALUE = os.getenv("NOTION_READY_VALUE") or "済み"
@@ -1895,6 +1894,38 @@ def delete_sheet_rows(service: Any, spreadsheet_id: str, sheet_name: str, row_nu
         service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests}).execute()
 
 
+def set_sheet_rows_background(
+    service: Any,
+    spreadsheet_id: str,
+    sheet_name: str,
+    row_numbers: Sequence[int],
+    column_count: int,
+    color: Dict[str, float],
+) -> None:
+    if not row_numbers:
+        return
+    sheet_id = sheet_id_for(service, spreadsheet_id, sheet_name)
+    requests = []
+    for row_number in sorted({int(row) for row in row_numbers if int(row) >= 2}):
+        requests.append(
+            {
+                "repeatCell": {
+                    "range": {
+                        "sheetId": sheet_id,
+                        "startRowIndex": row_number - 1,
+                        "endRowIndex": row_number,
+                        "startColumnIndex": 0,
+                        "endColumnIndex": column_count,
+                    },
+                    "cell": {"userEnteredFormat": {"backgroundColor": color}},
+                    "fields": "userEnteredFormat.backgroundColor",
+                }
+            }
+        )
+    if requests:
+        service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests}).execute()
+
+
 def append_sheet_row(state: Dict[str, Any]) -> None:
     sections = state.get("sections", [])
     x_urls_by_section = {
@@ -1928,13 +1959,10 @@ def append_sheet_row(state: Dict[str, Any]) -> None:
         return
     config = load_sheets_config()
     service = build_sheets_service(config)
-    today_sheet = os.getenv("TODAY_AD_DB_SHEET", DEFAULT_TODAY_AD_DB_SHEET)
     master_sheet = os.getenv("AD_ANALYSIS_MASTER_SHEET", DEFAULT_AD_ANALYSIS_MASTER_SHEET)
     spreadsheet_id = os.getenv("AD_ANALYSIS_SPREADSHEET_ID", DEFAULT_AD_ANALYSIS_SPREADSHEET_ID)
-    today_values = read_values(service, spreadsheet_id, f"{quote_sheet_name(today_sheet)}!A1:AZ")
     master_values = read_values(service, spreadsheet_id, f"{quote_sheet_name(master_sheet)}!A1:AZ")
-    today_headers = today_values[0] if today_values else []
-    master_headers = master_values[0] if master_values else today_headers
+    master_headers = master_values[0] if master_values else []
     master_headers = ensure_headers(
         service,
         spreadsheet_id,
@@ -1942,30 +1970,20 @@ def append_sheet_row(state: Dict[str, Any]) -> None:
         master_headers,
         ["訴求の型", "分析日", "状況", "最終掲載期間"],
     )
-    today_headers = ensure_headers(
-        service,
-        spreadsheet_id,
-        today_sheet,
-        today_headers,
-        ["訴求の型"],
-    )
-    if {"広告ライブラリURL", "広告分析", "ビジネスモデル", "訴求の型"}.difference(set(today_headers)):
-        raise RuntimeError(f"{today_sheet} に必要なヘッダーがありません。")
     if {"広告ライブラリURL", "広告分析", "ビジネスモデル", "訴求の型"}.difference(set(master_headers)):
         raise RuntimeError(f"{master_sheet} に必要なヘッダーがありません。")
 
-    today_index = {header: index for index, header in enumerate(today_headers)}
+    master_index = {header: index for index, header in enumerate(master_headers)}
     url_to_row = {}
     rows_by_number = {}
-    for row_number, row in enumerate(today_values[1:], start=2):
+    for row_number, row in enumerate(master_values[1:], start=2):
         rows_by_number[row_number] = row
-        url_index = today_index["広告ライブラリURL"]
+        url_index = master_index["広告ライブラリURL"]
         if url_index < len(row) and row[url_index]:
             url_to_row[str(row[url_index]).strip()] = row_number
 
-    master_rows: List[List[Any]] = []
-    delete_rows: List[int] = []
-    today_updates: Dict[int, Dict[str, Any]] = {}
+    completed_rows: List[int] = []
+    master_updates: Dict[int, Dict[str, Any]] = {}
     for ad in completed_ads:
         target_row = int(ad["sheet_row"]) if str(ad.get("sheet_row") or "").isdigit() else None
         if not target_row and ad["ad_library_url"]:
@@ -1973,9 +1991,10 @@ def append_sheet_row(state: Dict[str, Any]) -> None:
         if not target_row or target_row not in rows_by_number:
             continue
 
-        current = row_to_header_map(rows_by_number[target_row], today_headers)
+        current = row_to_header_map(rows_by_number[target_row], master_headers)
         updates = {
             "分析状況": "分析済み",
+            "ステータス": "分析済み",
             "会社名": ad["company_name"] or current.get("会社名", ""),
             "サービス名": ad["service_name"] or current.get("サービス名", ""),
             "広告分析": ad["analysis"],
@@ -1988,24 +2007,28 @@ def append_sheet_row(state: Dict[str, Any]) -> None:
         if not current.get("ジャンル") and ad.get("genre"):
             updates["ジャンル"] = ad["genre"]
         current.update({key: value for key, value in updates.items() if value not in (None, "")})
-        today_updates[target_row] = updates
-        master_rows.append(build_row_for_headers(current, master_headers))
-        delete_rows.append(target_row)
+        master_updates[target_row] = updates
+        completed_rows.append(target_row)
 
-    for row_number, updates in today_updates.items():
+    for row_number, updates in master_updates.items():
         for header, value in updates.items():
-            if header not in today_index or value in (None, ""):
+            if header not in master_index or value in (None, ""):
                 continue
-            column = chr(ord("A") + today_index[header])
-            update_values(service, spreadsheet_id, f"{quote_sheet_name(today_sheet)}!{column}{row_number}:{column}{row_number}", [[value]])
+            column = column_letter(master_index[header])
+            update_values(service, spreadsheet_id, f"{quote_sheet_name(master_sheet)}!{column}{row_number}:{column}{row_number}", [[value]])
 
-    if master_rows:
-        append_values(service, spreadsheet_id, f"{quote_sheet_name(master_sheet)}!A:AZ", master_rows)
+    if completed_rows:
+        set_sheet_rows_background(
+            service,
+            spreadsheet_id,
+            master_sheet,
+            completed_rows,
+            len(master_headers),
+            {"red": 1.0, "green": 1.0, "blue": 1.0},
+        )
         refreshed_master = read_values(service, spreadsheet_id, f"{quote_sheet_name(master_sheet)}!A1:AZ")
         sort_master_by_genre(service, spreadsheet_id, master_sheet, master_headers, len(refreshed_master))
-        delete_sheet_rows(service, spreadsheet_id, today_sheet, delete_rows)
         freeze_row_height(service, spreadsheet_id, master_sheet, pixel_size=20)
-        freeze_row_height(service, spreadsheet_id, today_sheet, pixel_size=20)
 
 
 def execute_due(slot: str, run_now: bool = False) -> Dict[str, Any]:

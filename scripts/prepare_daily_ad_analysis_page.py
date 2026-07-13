@@ -17,7 +17,7 @@ from notion_api import append_block_children, create_database_page, load_notion_
 from sheets_api import build_sheets_service, load_sheets_config, read_values, update_values
 
 
-DEFAULT_SHEET = "今日の広告DB"
+DEFAULT_SHEET = "広告分析マスターDB"
 DEFAULT_SPREADSHEET_ID = "15mskJs84UE7-CUtwELlCnjw3_DoWpAIYnZUvqiJvrdc"
 DEFAULT_AD_COUNT = 1
 TITLE_ENV = "NOTION_DAILY_AD_PAGE_TITLE_PROPERTY"
@@ -49,7 +49,7 @@ def first_value(row: Dict[str, Any], headers: Iterable[str]) -> str:
 
 def row_is_unanalyzed(row: Dict[str, Any]) -> bool:
     status = clean(row.get("ステータス") or row.get("分析状況"))
-    return not clean(row.get("広告分析")) and not clean(row.get("ビジネスモデル")) and status not in {"分析済み", "投稿済み", "完了"}
+    return not clean(row.get("広告分析")) and not clean(row.get("ビジネスモデル")) and status in {"", "未分析", "作成中"}
 
 
 def row_has_ad(row: Dict[str, Any]) -> bool:
@@ -134,19 +134,18 @@ def ad_caption_items(company: str, service: str, genre: str, sub_genre: str, per
     return items
 
 
-def ad_metadata_body_blocks(company: str, service: str, period: str) -> List[Dict[str, Any]]:
+def ad_metadata_body_blocks(company: str, service: str, period: str, sheet_row: str) -> List[Dict[str, Any]]:
+    lines = [
+        f"引用元：{company}",
+        f"掲載期間：{period}",
+        "",
+        "訴求の型：",
+    ]
+    if sheet_row:
+        lines.append(f"スプレッドシート行：{sheet_row}")
     return [
         paragraph(""),
-        paragraph(
-            "\n".join(
-                [
-                    f"引用元：{company}",
-                    f"掲載期間：{period}",
-                    "",
-                    "訴求の型：",
-                ]
-            )
-        ),
+        paragraph("\n".join(lines)),
     ]
 
 
@@ -165,7 +164,7 @@ def ad_blocks(ad: Dict[str, Any], ad_number: int) -> List[Dict[str, Any]]:
         blocks.append(image)
     else:
         blocks.append(paragraph("広告スクショ：未登録（スプシに広告スクショURL列があれば自動貼付できます）"))
-    blocks.extend(ad_metadata_body_blocks(company, service, period))
+    blocks.extend(ad_metadata_body_blocks(company, service, period, clean(ad.get("_sheet_row"))))
     blocks.append(paragraph(""))
     blocks.append(paragraph(""))
     blocks.append(paragraph(""))
@@ -284,8 +283,8 @@ def mark_ads_inserted_to_notion(sheet_name: str, spreadsheet_id: str, headers: L
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="今日の広告DBの未分析広告から、Notion分析ページを作成します。")
-    parser.add_argument("--sheet-name", default=os.getenv("TODAY_AD_DB_SHEET", DEFAULT_SHEET))
+    parser = argparse.ArgumentParser(description="広告分析マスターDBの作成中広告から、Notion分析ページを作成します。")
+    parser.add_argument("--sheet-name", default=os.getenv("AD_ANALYSIS_MASTER_SHEET", DEFAULT_SHEET))
     parser.add_argument("--spreadsheet-id", default=os.getenv("AD_ANALYSIS_SPREADSHEET_ID", DEFAULT_SPREADSHEET_ID))
     parser.add_argument("--count", type=int, default=int(os.getenv("DAILY_AD_ANALYSIS_COUNT", DEFAULT_AD_COUNT)))
     parser.add_argument("--dry-run", action="store_true")

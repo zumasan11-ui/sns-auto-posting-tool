@@ -16,9 +16,9 @@ def run(cmd: list[str]) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="今日の広告DBを指定件数に整え、Notion日次分析ページを作成します。")
+    parser = argparse.ArgumentParser(description="広告分析マスターDBに作成中広告を直接追加し、Notion日次分析ページを作成します。")
     parser.add_argument("--spreadsheet", default=os.getenv("AD_ANALYSIS_SPREADSHEET_ID", "") or DEFAULT_SPREADSHEET_ID)
-    parser.add_argument("--today-sheet", default=os.getenv("TODAY_AD_DB_SHEET", "今日の広告DB"))
+    parser.add_argument("--today-sheet", default=os.getenv("AD_ANALYSIS_MASTER_SHEET", "広告分析マスターDB"))
     parser.add_argument("--count", type=int, default=int(os.getenv("DAILY_AD_ANALYSIS_COUNT", "1")))
     parser.add_argument("--search-limit", type=int, default=int(os.getenv("DAILY_SEARCH_LIMIT", "5")))
     parser.add_argument("--per-search-max", type=int, default=int(os.getenv("PER_SEARCH_AD_MAX", "5")))

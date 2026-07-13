@@ -20,8 +20,8 @@ from scripts.search_history import HISTORY_SHEET, update_search_history
 
 
 DEFAULT_SPREADSHEET = "https://docs.google.com/spreadsheets/d/15mskJs84UE7-CUtwELlCnjw3_DoWpAIYnZUvqiJvrdc/edit"
-DEFAULT_SHEET = "今日の広告DB"
 MASTER_SHEET = "広告分析マスターDB"
+DEFAULT_SHEET = MASTER_SHEET
 DEFAULT_SEARCH_NAME = "医療脱毛"
 DEFAULT_GENRE = ""
 DEFAULT_SUB_GENRE = ""
@@ -463,10 +463,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-enrich-from-lp", dest="enrich_from_lp", action="store_false")
     parser.add_argument("--company-search", action="store_true", default=True)
     parser.add_argument("--no-company-search", dest="company_search", action="store_false")
-    parser.add_argument("--daily-genre-cap", type=int, default=2, help="今日の広告DBで同ジャンルを優先的に抑える目安。足りない時は自動で緩和します。")
-    parser.add_argument("--daily-company-cap", type=int, default=1, help="今日の広告DBで同一会社を優先的に抑える目安。足りない時は自動で緩和します。")
-    parser.add_argument("--daily-lp-cap", type=int, default=1, help="今日の広告DBで同一LPを優先的に抑える目安。足りない時は自動で緩和します。")
-    parser.add_argument("--daily-service-cap", type=int, default=1, help="今日の広告DBで同一サービス名を優先的に抑える目安。足りない時は自動で緩和します。")
+    parser.add_argument("--daily-genre-cap", type=int, default=2, help="作成中広告で同ジャンルを優先的に抑える目安。足りない時は自動で緩和します。")
+    parser.add_argument("--daily-company-cap", type=int, default=1, help="作成中広告で同一会社を優先的に抑える目安。足りない時は自動で緩和します。")
+    parser.add_argument("--daily-lp-cap", type=int, default=1, help="作成中広告で同一LPを優先的に抑える目安。足りない時は自動で緩和します。")
+    parser.add_argument("--daily-service-cap", type=int, default=1, help="作成中広告で同一サービス名を優先的に抑える目安。足りない時は自動で緩和します。")
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 
@@ -476,7 +476,7 @@ def existing_diversity_counts(rows: List[Dict[str, Any]]) -> tuple[Counter[str],
     company_counts: Counter[str] = Counter()
     lp_counts: Counter[str] = Counter()
     service_counts: Counter[str] = Counter()
-    active_statuses = {"", "未分析", "Notion投入済み"}
+    active_statuses = {"", "未分析", "作成中", "Notion投入済み"}
     for row in rows:
         status = clean_name(row.get("ステータス") or row.get("分析状況"))
         if status not in active_statuses:

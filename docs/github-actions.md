@@ -62,7 +62,7 @@ Notionデータベースから `状態` が `済み` になっているページ
 - `GOOGLE_SHEETS_DEFAULT_SHEET`
 - `AD_ANALYSIS_SPREADSHEET_ID`: 広告分析マスターDBのスプレッドシートID
 - `AD_ANALYSIS_MASTER_SHEET`: 既定値 `広告分析マスターDB`
-- `TODAY_AD_DB_SHEET`: 既定値 `今日の広告DB`
+- `TODAY_AD_DB_SHEET`: 互換用。現在のリサーチ導線は `AD_ANALYSIS_MASTER_SHEET` に直接追加します
 - `DAILY_AD_ANALYSIS_COUNT`: 既定値 `1`
 - `NOTION_DAILY_AD_PAGE_INITIAL_STATUS`: Notionページ作成時の初期ステータス。既定値 `未着手`
 - `NOTION_READY_PROPERTY`: 投稿許可に使うNotionの状態欄。既定値 `状態`
@@ -71,7 +71,7 @@ Notionデータベースから `状態` が `済み` になっているページ
 
 `GH_SECRETS_TOKEN` は、Actions内で自動更新されたSNSトークンを次回実行用にGitHub Secretsへ書き戻すために使います。`repo` 権限または対象リポジトリのSecrets更新権限を持つトークンを登録してください。値はログへ表示しません。
 
-Meta広告ライブラリの検索、今日の広告DBへの追加、Notion日次ページ作成はGitHub Actionsでは実行しません。Mac上でCodexに「リサーチして」と指示した時だけ、ローカルブラウザ経由で実行します。GitHub Actionsは、作成済みNotionページから分析済み本文を読み取り、投稿素材生成、SNS投稿、Sheets書き戻し、マスターDB追記を担当します。
+Meta広告ライブラリの検索、マスターDBへの作成中行追加、Notion日次ページ作成はGitHub Actionsでは実行しません。Mac上でCodexに「リサーチして」と指示した時だけ、ローカルブラウザ経由で実行します。GitHub Actionsは、作成済みNotionページから分析済み本文を読み取り、投稿素材生成、SNS投稿、同じマスター行へのSheets書き戻しを担当します。
 
 ## トークン自動更新
 
