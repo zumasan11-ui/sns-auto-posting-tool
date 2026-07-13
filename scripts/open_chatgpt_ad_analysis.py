@@ -151,10 +151,10 @@ def capture_assets(row: Dict[str, str], output_dir: Path, chrome_executable: str
                 page.wait_for_timeout(5000)
                 png_path = output_dir / "lp_fullpage.png"
                 page.screenshot(path=str(png_path), full_page=True)
+                files.append(png_path)
                 try:
                     pdf_path = output_dir / "lp_fullpage.pdf"
                     page.pdf(path=str(pdf_path), print_background=True, format="A4")
-                    files.append(pdf_path)
                 except Exception as error:
                     log(f"LP PDFの作成をスキップ: {error}")
         finally:
