@@ -1988,6 +1988,10 @@ def append_sheet_row(state: Dict[str, Any]) -> None:
         target_row = int(ad["sheet_row"]) if str(ad.get("sheet_row") or "").isdigit() else None
         if not target_row and ad["ad_library_url"]:
             target_row = url_to_row.get(str(ad["ad_library_url"]).strip())
+        if target_row and ad["ad_library_url"] and target_row in rows_by_number:
+            current_at_row = row_to_header_map(rows_by_number[target_row], master_headers)
+            if str(current_at_row.get("広告ライブラリURL") or "").strip() != str(ad["ad_library_url"]).strip():
+                target_row = url_to_row.get(str(ad["ad_library_url"]).strip())
         if not target_row or target_row not in rows_by_number:
             continue
 
