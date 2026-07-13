@@ -87,16 +87,10 @@ def first_value(row: Dict[str, str], headers: tuple[str, ...]) -> str:
 def build_prompt(row: Dict[str, str], files: List[Path]) -> str:
     service = clean(row.get("サービス名"))
     company = clean(row.get("会社名"))
-    file_lines = "\n".join(f"- {path.name}" for path in files)
     return f"""この会社とサービスのことを短くわかりやすく解説して。
 
 会社名：{company}
 サービス名：{service}
-
-添付ファイル：
-{file_lines}
-
-広告とLPも参考にして、専門用語をなるべく使わずに説明して。
 """
 
 
