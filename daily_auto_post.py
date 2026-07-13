@@ -1618,6 +1618,18 @@ def split_threads_text(text: str, limit: int = THREADS_MAX_TEXT_LENGTH) -> List[
     return chunks
 
 
+def threads_title_and_body(text: str) -> tuple[str, str]:
+    lines = str(text or "").strip().splitlines()
+    if not lines:
+        return "広告分析vol.", ""
+    title = lines[0].strip()
+    match = re.match(r"^【\s*(広告分析vol\.?\d*)\s*】$", title)
+    if match:
+        title = match.group(1)
+    body = "\n".join(lines[1:]).strip()
+    return title, body
+
+
 def create_threads_container(
     user_id: str,
     access_token: str,
@@ -1651,10 +1663,11 @@ def create_threads_image_post(text: str, image_url: Optional[str]) -> str:
     credentials = load_threads_credentials()
     user_id = credentials["THREADS_USER_ID"]
     access_token = credentials["THREADS_ACCESS_TOKEN"]
-    chunks = split_threads_text(text)
-    root_id = ""
-    previous_id: Optional[str] = None
-    for index, chunk in enumerate(chunks):
+    title, body = threads_title_and_body(text)
+    body_chunks = split_threads_text(body) if body else []
+    root_id = create_threads_container(user_id, access_token, title)
+    previous_id: Optional[str] = root_id
+    for index, chunk in enumerate(body_chunks):
         post_id = create_threads_container(
             user_id,
             access_token,
@@ -1662,10 +1675,8 @@ def create_threads_image_post(text: str, image_url: Optional[str]) -> str:
             image_url if index == 0 else None,
             previous_id,
         )
-        if not root_id:
-            root_id = post_id
         previous_id = post_id
-    return f"Threads投稿ID: {root_id}" + (f"（返信{len(chunks) - 1}件）" if len(chunks) > 1 else "")
+    return f"Threads投稿ID: {root_id}" + (f"（返信{len(body_chunks)}件）" if body_chunks else "")
 
 
 def create_x_post(text: str, image_url: Optional[str], image_path: Optional[str] = None) -> str:
