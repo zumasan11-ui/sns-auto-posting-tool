@@ -8,10 +8,11 @@
   <style>
     :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f6f7f9; color: #111827; }
-    main { width: min(680px, calc(100vw - 32px)); background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; box-shadow: 0 12px 32px rgba(17, 24, 39, .08); }
+    main { width: min(720px, calc(100vw - 32px)); background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; box-shadow: 0 12px 32px rgba(17, 24, 39, .08); }
     h1 { font-size: 20px; line-height: 1.35; margin: 0 0 16px; letter-spacing: 0; }
     p { color: #4b5563; line-height: 1.7; margin: 0 0 18px; }
     button { appearance: none; border: 0; border-radius: 6px; background: #111827; color: white; font-weight: 700; font-size: 16px; padding: 12px 16px; cursor: pointer; }
+    .note { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; color: #7c2d12; padding: 12px 14px; }
     ul { margin: 18px 0 0; padding-left: 20px; color: #374151; }
     li { margin: 8px 0; overflow-wrap: anywhere; }
     a { color: #2563eb; }
@@ -20,7 +21,8 @@
 <body>
   <main>
     <h1>vol.20 楽天市場 プロモーション 一括オープン</h1>
-    <p id="status">広告URL、LP URL、ChatGPT URLを開きます。Chromeに止められたら下のボタンを押してください。</p>
+    <p id="status">広告URL、LP URL、ChatGPT URLを開きます。</p>
+    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後にこのボタンを押すと3つ開きます。</p>
     <button type="button" id="open">3リンクを開く</button>
     <ul id="links"></ul>
   </main>
@@ -46,10 +48,9 @@
       }
       status.textContent = opened === links.length
         ? "開きました。このタブは閉じて大丈夫です。"
-        : "Chromeに一部止められました。もう一度ボタンを押すか、下の個別リンクから開いてください。";
+        : "Chromeに止められました。アドレスバー右側のブロック表示から、このサイトのポップアップを許可してください。";
     }
     document.getElementById("open").addEventListener("click", openAll);
-    window.addEventListener("load", () => setTimeout(openAll, 250));
   </script>
 </body>
 </html>
