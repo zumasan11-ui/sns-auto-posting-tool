@@ -21,13 +21,13 @@
 <body>
   <main>
     <h1>vol.16 DHC 一括オープン</h1>
-    <p id="status">広告URL、LP URL、ChatGPT URLを開きます。</p>
-    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後にこのボタンを押すと3つ開きます。</p>
+    <p id="status">ChatGPT、広告URL、LP URLの順で開きます。</p>
+    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後はNotionの一括オープンをクリックするだけで3つ開きます。</p>
     <button type="button" id="open">3リンクを開く</button>
     <ul id="links"></ul>
   </main>
   <script>
-    const links = [{"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=872018035718038"}, {"label": "LP URL", "url": "https://top.dhc.co.jp/shop/ad/bofutsushosan/lqhabl1h/index.html?utm_source=fb&utm_medium=display&utm_campaign=new1_40558_bofuasc_bofuasc_bofuascbofuasclqhabl1h04035_04035_agt11"}, {"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c541-e9a4-83ee-a956-fbf7ea588837"}];
+    const links = [{"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c541-e9a4-83ee-a956-fbf7ea588837"}, {"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=872018035718038"}, {"label": "LP URL", "url": "https://top.dhc.co.jp/shop/ad/bofutsushosan/lqhabl1h/index.html?utm_source=fb&utm_medium=display&utm_campaign=new1_40558_bofuasc_bofuasc_bofuascbofuasclqhabl1h04035_04035_agt11"}];
     const list = document.getElementById("links");
     const status = document.getElementById("status");
     for (const item of links) {
@@ -51,6 +51,7 @@
         : "Chromeに止められました。アドレスバー右側のブロック表示から、このサイトのポップアップを許可してください。";
     }
     document.getElementById("open").addEventListener("click", openAll);
+    window.addEventListener("load", () => setTimeout(openAll, 250));
   </script>
 </body>
 </html>

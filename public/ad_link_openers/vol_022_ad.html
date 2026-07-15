@@ -21,13 +21,13 @@
 <body>
   <main>
     <h1>vol.22 長谷工不動産の新築マンションブランド「ブランシエラ」 一括オープン</h1>
-    <p id="status">広告URL、LP URL、ChatGPT URLを開きます。</p>
-    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後にこのボタンを押すと3つ開きます。</p>
+    <p id="status">ChatGPT、広告URL、LP URLの順で開きます。</p>
+    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後はNotionの一括オープンをクリックするだけで3つ開きます。</p>
     <button type="button" id="open">3リンクを開く</button>
     <ul id="links"></ul>
   </main>
   <script>
-    const links = [{"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=1484820139603180"}, {"label": "LP URL", "url": "https://www.branchera.com/ms/toyohira36/lp2/?utm_source=meta&utm_medium=tg"}, {"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c6ca-c2ec-83ee-96c0-25a7346b2f4d"}];
+    const links = [{"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c6ca-c2ec-83ee-96c0-25a7346b2f4d"}, {"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=1484820139603180"}, {"label": "LP URL", "url": "https://www.branchera.com/ms/toyohira36/lp2/?utm_source=meta&utm_medium=tg"}];
     const list = document.getElementById("links");
     const status = document.getElementById("status");
     for (const item of links) {
@@ -51,6 +51,7 @@
         : "Chromeに止められました。アドレスバー右側のブロック表示から、このサイトのポップアップを許可してください。";
     }
     document.getElementById("open").addEventListener("click", openAll);
+    window.addEventListener("load", () => setTimeout(openAll, 250));
   </script>
 </body>
 </html>

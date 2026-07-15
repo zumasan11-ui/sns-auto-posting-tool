@@ -21,13 +21,13 @@
 <body>
   <main>
     <h1>vol.26 アンジュ 一括オープン</h1>
-    <p id="status">広告URL、LP URL、ChatGPT URLを開きます。</p>
-    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後にこのボタンを押すと3つ開きます。</p>
+    <p id="status">ChatGPT、広告URL、LP URLの順で開きます。</p>
+    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後はNotionの一括オープンをクリックするだけで3つ開きます。</p>
     <button type="button" id="open">3リンクを開く</button>
     <ul id="links"></ul>
   </main>
   <script>
-    const links = [{"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=4496359197350948"}, {"label": "LP URL", "url": "https://app.adjust.com/1noofjit_1n71uzfb?campaign=%7B%7Bcampaign.name%7D%7D%20(%7B%7Bcampaign.id%7D%7D)&adgroup=%7B%7Badset.name%7D%7D%20(%7B%7Badset.id%7D%7D)&creative=%7B%7Bad.name%7D%7D%20(%7B%7Bad.id%7D%7D"}, {"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c76b-bd58-83e8-b92e-790ea44905f8"}];
+    const links = [{"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c76b-bd58-83e8-b92e-790ea44905f8"}, {"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=4496359197350948"}, {"label": "LP URL", "url": "https://app.adjust.com/1noofjit_1n71uzfb?campaign=%7B%7Bcampaign.name%7D%7D%20(%7B%7Bcampaign.id%7D%7D)&adgroup=%7B%7Badset.name%7D%7D%20(%7B%7Badset.id%7D%7D)&creative=%7B%7Bad.name%7D%7D%20(%7B%7Bad.id%7D%7D"}];
     const list = document.getElementById("links");
     const status = document.getElementById("status");
     for (const item of links) {
@@ -51,6 +51,7 @@
         : "Chromeに止められました。アドレスバー右側のブロック表示から、このサイトのポップアップを許可してください。";
     }
     document.getElementById("open").addEventListener("click", openAll);
+    window.addEventListener("load", () => setTimeout(openAll, 250));
   </script>
 </body>
 </html>

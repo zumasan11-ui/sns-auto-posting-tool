@@ -21,13 +21,13 @@
 <body>
   <main>
     <h1>vol.20 楽天市場 プロモーション 一括オープン</h1>
-    <p id="status">広告URL、LP URL、ChatGPT URLを開きます。</p>
-    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後にこのボタンを押すと3つ開きます。</p>
+    <p id="status">ChatGPT、広告URL、LP URLの順で開きます。</p>
+    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後はNotionの一括オープンをクリックするだけで3つ開きます。</p>
     <button type="button" id="open">3リンクを開く</button>
     <ul id="links"></ul>
   </main>
   <script>
-    const links = [{"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=1216988782735643"}, {"label": "LP URL", "url": "https://grp08.ias.rakuten.co.jp/ur/?eid=ifd-43889&ultra_cid=102834_1717661545&ultra_crid=jpradbs5300b-b-jp001&r=https%3A%2F%2Fitem.rakuten.co.jp%2Fdabbsson%2Fjpradbs5300b-b-jp001%2F%3FvariantId%3DJPRADBS5300B-B-JP001%26scid%3Dwe_ich_tdaexpmeta"}, {"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c67a-b200-83ee-acd1-db207fec87ce"}];
+    const links = [{"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c67a-b200-83ee-acd1-db207fec87ce"}, {"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=1216988782735643"}, {"label": "LP URL", "url": "https://grp08.ias.rakuten.co.jp/ur/?eid=ifd-43889&ultra_cid=102834_1717661545&ultra_crid=jpradbs5300b-b-jp001&r=https%3A%2F%2Fitem.rakuten.co.jp%2Fdabbsson%2Fjpradbs5300b-b-jp001%2F%3FvariantId%3DJPRADBS5300B-B-JP001%26scid%3Dwe_ich_tdaexpmeta"}];
     const list = document.getElementById("links");
     const status = document.getElementById("status");
     for (const item of links) {
@@ -51,6 +51,7 @@
         : "Chromeに止められました。アドレスバー右側のブロック表示から、このサイトのポップアップを許可してください。";
     }
     document.getElementById("open").addEventListener("click", openAll);
+    window.addEventListener("load", () => setTimeout(openAll, 250));
   </script>
 </body>
 </html>

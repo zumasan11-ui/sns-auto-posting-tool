@@ -21,13 +21,13 @@
 <body>
   <main>
     <h1>vol.19 Nutro EC 一括オープン</h1>
-    <p id="status">広告URL、LP URL、ChatGPT URLを開きます。</p>
-    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後にこのボタンを押すと3つ開きます。</p>
+    <p id="status">ChatGPT、広告URL、LP URLの順で開きます。</p>
+    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後はNotionの一括オープンをクリックするだけで3つ開きます。</p>
     <button type="button" id="open">3リンクを開く</button>
     <ul id="links"></ul>
   </main>
   <script>
-    const links = [{"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=2059188527975387"}, {"label": "LP URL", "url": "https://store.nutro.jp/collections/item_c?utm_campaign=Nutro_D2C_2025oct-dec&utm_medium=paid_social&utm_source=other&utm_content=Img-Meta-AnyPurchase-LAL&utm_id=%7B%7Bcampaign.id%7D%7D&utm_platform=meta"}, {"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c5c0-9378-83ee-bd78-4fa735e8219a"}];
+    const links = [{"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c5c0-9378-83ee-bd78-4fa735e8219a"}, {"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=2059188527975387"}, {"label": "LP URL", "url": "https://store.nutro.jp/collections/item_c?utm_campaign=Nutro_D2C_2025oct-dec&utm_medium=paid_social&utm_source=other&utm_content=Img-Meta-AnyPurchase-LAL&utm_id=%7B%7Bcampaign.id%7D%7D&utm_platform=meta"}];
     const list = document.getElementById("links");
     const status = document.getElementById("status");
     for (const item of links) {
@@ -51,6 +51,7 @@
         : "Chromeに止められました。アドレスバー右側のブロック表示から、このサイトのポップアップを許可してください。";
     }
     document.getElementById("open").addEventListener("click", openAll);
+    window.addEventListener("load", () => setTimeout(openAll, 250));
   </script>
 </body>
 </html>

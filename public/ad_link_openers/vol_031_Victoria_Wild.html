@@ -21,13 +21,13 @@
 <body>
   <main>
     <h1>vol.31 Victoria Wild 一括オープン</h1>
-    <p id="status">広告URL、LP URL、ChatGPT URLを開きます。</p>
-    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後にこのボタンを押すと3つ開きます。</p>
+    <p id="status">ChatGPT、広告URL、LP URLの順で開きます。</p>
+    <p class="note">広告URLだけ開く場合は、アドレスバー右側のポップアップブロック表示から、このサイトのポップアップとリダイレクトを許可してください。許可後はNotionの一括オープンをクリックするだけで3つ開きます。</p>
     <button type="button" id="open">3リンクを開く</button>
     <ul id="links"></ul>
   </main>
   <script>
-    const links = [{"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=739832644099223"}, {"label": "LP URL", "url": "http://optbfedge.cfd/"}, {"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c845-66d0-83ee-ac27-9f45ab5e4cd6"}];
+    const links = [{"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c845-66d0-83ee-ac27-9f45ab5e4cd6"}, {"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=739832644099223"}, {"label": "LP URL", "url": "http://optbfedge.cfd/"}];
     const list = document.getElementById("links");
     const status = document.getElementById("status");
     for (const item of links) {
@@ -51,6 +51,7 @@
         : "Chromeに止められました。アドレスバー右側のブロック表示から、このサイトのポップアップを許可してください。";
     }
     document.getElementById("open").addEventListener("click", openAll);
+    window.addEventListener("load", () => setTimeout(openAll, 250));
   </script>
 </body>
 </html>
