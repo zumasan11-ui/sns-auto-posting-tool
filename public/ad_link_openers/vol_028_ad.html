@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>vol.28 ソラハピ 一括オープン</title>
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f6f7f9; color: #111827; }
+    main { width: min(680px, calc(100vw - 32px)); background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; box-shadow: 0 12px 32px rgba(17, 24, 39, .08); }
+    h1 { font-size: 20px; line-height: 1.35; margin: 0 0 16px; letter-spacing: 0; }
+    p { color: #4b5563; line-height: 1.7; margin: 0 0 18px; }
+    button { appearance: none; border: 0; border-radius: 6px; background: #111827; color: white; font-weight: 700; font-size: 16px; padding: 12px 16px; cursor: pointer; }
+    ul { margin: 18px 0 0; padding-left: 20px; color: #374151; }
+    li { margin: 8px 0; overflow-wrap: anywhere; }
+    a { color: #2563eb; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>vol.28 ソラハピ 一括オープン</h1>
+    <p id="status">広告URL、LP URL、ChatGPT URLを開きます。Chromeに止められたら下のボタンを押してください。</p>
+    <button type="button" id="open">3リンクを開く</button>
+    <ul id="links"></ul>
+  </main>
+  <script>
+    const links = [{"label": "広告URL", "url": "https://www.facebook.com/ads/library/?id=1667004393980457"}, {"label": "LP URL", "url": "http://itunes.apple.com/app/id1457300005"}, {"label": "ChatGPT URL", "url": "https://chatgpt.com/c/6a57c7b9-8d20-83ee-86f6-0b676fbb188b"}];
+    const list = document.getElementById("links");
+    const status = document.getElementById("status");
+    for (const item of links) {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.href = item.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = item.label + "： " + item.url;
+      li.appendChild(a);
+      list.appendChild(li);
+    }
+    function openAll() {
+      let opened = 0;
+      for (const item of links) {
+        const win = window.open(item.url, "_blank", "noopener,noreferrer");
+        if (win) opened += 1;
+      }
+      status.textContent = opened === links.length
+        ? "開きました。このタブは閉じて大丈夫です。"
+        : "Chromeに一部止められました。もう一度ボタンを押すか、下の個別リンクから開いてください。";
+    }
+    document.getElementById("open").addEventListener("click", openAll);
+    window.addEventListener("load", () => setTimeout(openAll, 250));
+  </script>
+</body>
+</html>
