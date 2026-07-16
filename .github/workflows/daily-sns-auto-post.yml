@@ -24,15 +24,6 @@ on:
           - "19:00"
           - "19:30"
           - "20:00"
-  schedule:
-    - cron: "0 20 * * *" # JST 05:00 prepare
-    - cron: "0 23 * * *" # JST 08:00 LinkedIn
-    - cron: "0 3 * * *" # JST 12:00 X / Instagram feed / Facebook page
-    - cron: "30 9 * * *" # JST 18:30 TikTok
-    - cron: "0 10 * * *" # JST 19:00 Instagram Reels
-    - cron: "30 10 * * *" # JST 19:30 YouTube Shorts
-    - cron: "0 11 * * *" # JST 20:00 Threads
-
 permissions:
   contents: write
 
