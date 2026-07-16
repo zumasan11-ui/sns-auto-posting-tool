@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>広告の勝因分析</title>
+    <link rel="icon" type="image/png" href="./favicon.png" />
     <style>
       body {
         margin: 0;
@@ -15,6 +16,21 @@
         max-width: 760px;
         margin: 0 auto;
         padding: 56px 20px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 28px;
+      }
+      .app-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+      }
+      .app-name {
+        font-weight: 700;
+        font-size: 20px;
       }
       h1 {
         font-size: 32px;
@@ -29,6 +45,19 @@
         gap: 16px;
         margin-top: 32px;
       }
+      section {
+        margin-top: 36px;
+        padding-top: 24px;
+        border-top: 1px solid #e5e7eb;
+      }
+      h2 {
+        font-size: 20px;
+        margin: 0 0 12px;
+      }
+      ul {
+        padding-left: 22px;
+        line-height: 1.9;
+      }
       a {
         color: #0f766e;
       }
@@ -36,11 +65,25 @@
   </head>
   <body>
     <main>
+      <header>
+        <img class="app-icon" src="./assets/app-icon.png" alt="広告の勝因分析 app icon" />
+        <div class="app-name">広告の勝因分析</div>
+      </header>
       <h1>広告の勝因分析</h1>
       <p>
         広告分析・ビジネスモデル分析の投稿素材を作成し、SNS投稿を管理するためのWebベースのコンテンツ管理ツールです。
         ユーザーが作成した広告分析コンテンツをもとに、TikTok向けの短尺動画を生成し、ユーザー本人の許可を得たTikTokアカウントへ投稿します。
       </p>
+      <section>
+        <h2>TikTok連携でできること</h2>
+        <ul>
+          <li>Login Kitでユーザー本人のTikTokアカウントを認証します。</li>
+          <li><code>user.info.basic</code>で投稿先アカウントを確認します。</li>
+          <li>生成済みMP4をContent Posting APIでTikTokへ送信します。</li>
+          <li><code>video.publish</code>はDirect Postで本人アカウントへ投稿するために使用します。</li>
+          <li><code>video.upload</code>は動画アップロード処理を利用するために使用します。</li>
+        </ul>
+      </section>
       <nav>
         <a href="./terms/">利用規約</a>
         <a href="./privacy/">プライバシーポリシー</a>

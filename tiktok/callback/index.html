@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TikTok OAuth Callback</title>
+    <title>広告の勝因分析 TikTok OAuth Callback</title>
+    <link rel="icon" type="image/png" href="../../favicon.png" />
     <style>
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
@@ -35,10 +36,29 @@
         color: #667085;
         font-size: 13px;
       }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .app-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 11px;
+      }
+      .app-name {
+        font-weight: 700;
+        font-size: 18px;
+      }
     </style>
   </head>
   <body>
-    <h1>TikTok OAuth Callback</h1>
+    <header>
+      <img class="app-icon" src="../../assets/app-icon.png" alt="広告の勝因分析 app icon" />
+      <div class="app-name">広告の勝因分析</div>
+    </header>
+    <h1>広告の勝因分析 TikTok OAuth Callback</h1>
     <p>この画面の <code>code</code> をコピーして、<code>python tiktok_oauth.py --code "..."</code> に渡してください。</p>
     <textarea id="code" readonly></textarea>
     <button id="copy">codeをコピー</button>
