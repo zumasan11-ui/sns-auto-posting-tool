@@ -215,6 +215,8 @@ def page_ready_value(page: Dict[str, Any]) -> str:
 
 
 def page_is_approved_for_posting(page: Dict[str, Any]) -> bool:
+    if NOTION_READY_PROPERTY not in page.get("properties", {}):
+        return True
     return page_ready_value(page) == NOTION_READY_VALUE
 
 
@@ -345,7 +347,7 @@ def planned_page_still_approved(state: Dict[str, Any]) -> bool:
         page = request_notion("GET", f"/pages/{str(page_id).replace('-', '')}", config)
         return page_is_approved_for_posting(page)
     except Exception as error:
-        print(f"Notion投稿許可の再確認に失敗したため投稿を止めます: {error}", file=sys.stderr)
+        print(f"Notionページの再確認に失敗したため投稿を止めます: {error}", file=sys.stderr)
         return False
 
 
@@ -372,14 +374,10 @@ def pages_by_status(statuses: Sequence[str], page_size: int = 20) -> List[Dict[s
     config = load_notion_config()
     db_props = database_properties(config)
     ready_prop = db_props.get(NOTION_READY_PROPERTY)
-    if not ready_prop or ready_prop.get("type") not in {"select", "status"}:
-        print(
-            f"Notion投稿許可プロパティ {NOTION_READY_PROPERTY} が見つからないため、投稿対象を取得しません。",
-            file=sys.stderr,
-        )
-        return []
-    ready_filter_type = "select" if ready_prop.get("type") == "select" else "status"
-    ready_filter = {"property": NOTION_READY_PROPERTY, ready_filter_type: {"equals": NOTION_READY_VALUE}}
+    ready_filter = None
+    if ready_prop and ready_prop.get("type") in {"select", "status"}:
+        ready_filter_type = "select" if ready_prop.get("type") == "select" else "status"
+        ready_filter = {"property": NOTION_READY_PROPERTY, ready_filter_type: {"equals": NOTION_READY_VALUE}}
     status_targets = resolve_status_targets(db_props)
     matched_pages: List[Dict[str, Any]] = []
     seen_page_ids: set[str] = set()
@@ -395,7 +393,7 @@ def pages_by_status(statuses: Sequence[str], page_size: int = 20) -> List[Dict[s
         if not filters:
             continue
         status_filter = filters[0] if len(filters) == 1 else {"or": filters}
-        filter_data = {"and": [status_filter, ready_filter]}
+        filter_data = {"and": [status_filter, ready_filter]} if ready_filter else status_filter
         sorts = (
             [{"property": NOTION_DATE_PROPERTY, "direction": "ascending"}]
             if db_props.get(NOTION_DATE_PROPERTY, {}).get("type") == "date"
@@ -2044,7 +2042,7 @@ def execute_due(slot: str, run_now: bool = False) -> Dict[str, Any]:
         return state
     if not planned_page_still_approved(state):
         state["status"] = "idle"
-        state["message"] = f"Notionの{NOTION_READY_PROPERTY}が{NOTION_READY_VALUE}ではないため投稿を停止しました。"
+        state["message"] = f"Notionページが投稿対象外になったため投稿を停止しました。"
         save_state(state)
         return state
     if not state_within_daily_post_limit(state):
